@@ -3,170 +3,571 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>本地视频浏览器</title>
+<title>随拾 SuiShi · 本地短视频抽屉</title>
 <style>
   :root {
-    /* palette sourced from Chinese traditional colors (荼白 / 靛青 / 苍色 family) */
-    --bg: #F3F9F1;
-    --bg-elevated: #FFFFFF;
-    --border: #DCE3D8;
-    --text: #3D3B4F;
-    --text-dim: #75878A;
-    --accent: #177CB0;
-    --accent-hover: #2E4E7E;
-    --accent-dim: #D2F0F4;
-    --card-bg: #FFFFFF;
-    --danger: #F20C00;
-    --shadow: 0 1px 3px rgba(61,59,79,.06), 0 1px 2px rgba(61,59,79,.08);
+    /* 日常亲切风 (Warm Cozy Handcraft Palette) */
+    --bg-base: #FBF9F5;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F6F2EB;
+    --bg-hover: #EFE9DE;
+    --border: #E8E0D5;
+    --border-light: #F0EBE1;
+    --text-main: #2D2724;
+    --text-muted: #797167;
+    --text-light: #A39B90;
+    --accent: #E07A5F;
+    --accent-hover: #D0694E;
+    --accent-subtle: #FDF2EE;
+    --accent-border: #F7D4C8;
+    --secondary-accent: #6B8E7C;
+    --danger: #E55353;
+    --danger-subtle: #FDEDEC;
+    --shadow-sm: 0 1px 3px rgba(65, 45, 30, 0.05), 0 1px 2px rgba(65, 45, 30, 0.04);
+    --shadow-md: 0 4px 16px rgba(65, 45, 30, 0.08), 0 2px 6px rgba(65, 45, 30, 0.04);
+    --shadow-lg: 0 10px 30px rgba(65, 45, 30, 0.12), 0 4px 10px rgba(65, 45, 30, 0.06);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+    --sidebar-w: 260px;
+    --sidebar-collapsed-w: 64px;
   }
+
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     height: 100%;
+    overflow: hidden;
+  }
+
+  /* 主应用容器：双栏布局 */
+  #app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  /* ---------- 可伸缩侧边栏 ---------- */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 20;
+    user-select: none;
+  }
+  #sidebar.collapsed {
+    width: var(--sidebar-collapsed-w);
+    min-width: var(--sidebar-collapsed-w);
+  }
+  #sidebar.collapsed .sidebar-header {
+    padding: 14px 0;
+    justify-content: center;
+  }
+  #sidebar.collapsed .brand-wrap {
+    display: none;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-light);
+    height: 60px;
+  }
+  .brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+  }
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #E07A5F, #F28E2B);
+    color: #fff;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    box-shadow: 0 2px 6px rgba(224, 122, 95, 0.35);
+    flex-shrink: 0;
+  }
+  .brand-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-main);
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  #sidebar.collapsed .brand-info {
+    display: none;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover {
+    background: var(--bg-subtle);
+    color: var(--text-main);
+    border-color: var(--border-light);
+  }
+
+  .sidebar-add-wrap {
+    padding: 12px 14px;
+  }
+  .btn-add-folder {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border: 1px dashed var(--accent-border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .btn-add-folder:hover {
+    background: var(--accent);
+    color: #fff;
+    border-style: solid;
+    border-color: var(--accent);
+    box-shadow: 0 3px 8px rgba(224, 122, 95, 0.25);
+  }
+  #sidebar.collapsed .btn-add-folder {
+    padding: 8px;
+  }
+  #sidebar.collapsed .btn-add-folder span {
+    display: none;
+  }
+
+  .sidebar-nav-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 8px 16px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #sidebar.collapsed .sidebar-nav-title {
+    display: none;
+  }
+
+  .folder-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .folder-list::-webkit-scrollbar { width: 4px; }
+  .folder-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .folder-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    position: relative;
+    color: var(--text-muted);
+    transition: background 0.12s, color 0.12s;
+  }
+  .folder-item:hover {
+    background: var(--bg-subtle);
+    color: var(--text-main);
+  }
+  .folder-item.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .folder-item.active::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .folder-item-icon {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    flex-shrink: 0;
+  }
+  .folder-item-details {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .folder-item-name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .folder-item-sub {
+    font-size: 11px;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .folder-item.active .folder-item-sub {
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .folder-item-actions {
+    display: none;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .folder-item:hover .folder-item-actions {
+    display: flex;
+  }
+  .folder-action-btn {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-light);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+  }
+  .folder-action-btn:hover {
+    background: rgba(0,0,0,0.06);
+    color: var(--text-main);
+  }
+  .folder-action-btn.danger:hover {
+    color: var(--danger);
+    background: var(--danger-subtle);
+  }
+
+  #sidebar.collapsed .folder-item {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  #sidebar.collapsed .folder-item-details,
+  #sidebar.collapsed .folder-item-actions {
+    display: none;
+  }
+
+  .sidebar-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-light);
+    background: var(--bg-surface);
+  }
+  #sidebar.collapsed .sidebar-footer {
+    display: none;
+  }
+
+  /* ---------- 主内容区 ---------- */
+  #main-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-base);
   }
 
   header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
-    background: var(--bg-elevated);
+    padding: 12px 20px;
+    background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-sm);
+    z-index: 10;
   }
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 12px 0 0;
-    white-space: nowrap;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
-  button, select, input[type="text"] {
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 380px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 7px 12px 7px 32px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.15s;
+  }
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+  .search-wrap input::placeholder { color: var(--text-light); }
+
+  select, .btn-normal {
     font-family: inherit;
     font-size: 13px;
-    background: var(--card-bg);
-    color: var(--text);
+    background: var(--bg-surface);
+    color: var(--text-main);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     padding: 7px 12px;
     outline: none;
-  }
-  button {
     cursor: pointer;
-    transition: background .15s, border-color .15s;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   }
-  button:hover { border-color: var(--accent); }
-  button.primary {
+  select:hover, .btn-normal:hover { border-color: var(--accent); }
+  select:disabled, .btn-normal:disabled { opacity: 0.45; cursor: default; }
+
+  .btn-accent {
     background: var(--accent);
-    border-color: var(--accent);
+    border: 1px solid var(--accent);
     color: #fff;
-    font-weight: 500;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 7px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
   }
-  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-  button:disabled { opacity: .4; cursor: default; }
-  select { cursor: pointer; }
-  input[type="text"] {
-    min-width: 200px;
-    flex: 1;
+  .btn-accent:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: 0 2px 8px rgba(224, 122, 95, 0.35);
   }
-  input[type="text"]::placeholder { color: var(--text-dim); }
-  .spacer { flex: 1; }
-  .stats {
-    font-size: 12px;
-    color: var(--text-dim);
-    white-space: nowrap;
-  }
+  .btn-accent:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+
   label.checkbox {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     font-size: 13px;
-    color: var(--text-dim);
+    color: var(--text-muted);
     cursor: pointer;
     white-space: nowrap;
+    user-select: none;
+  }
+  label.checkbox input { accent-color: var(--accent); cursor: pointer; }
+
+  .spacer { flex: 1; }
+  .stats {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    background: var(--bg-subtle);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
   }
 
+  /* 状态栏 */
   #status-bar {
-    padding: 8px 16px;
-    font-size: 13px;
-    color: var(--text-dim);
+    padding: 8px 20px;
+    font-size: 12.5px;
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-bottom: 1px solid var(--accent-border);
     display: none;
+    animation: fadeIn 0.15s ease;
   }
   #status-bar.show { display: block; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  #empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 100px 20px;
-    color: var(--text-dim);
-    text-align: center;
-    gap: 14px;
-  }
-  #empty-state svg { opacity: .35; }
-  #empty-state .hint { font-size: 13px; max-width: 420px; line-height: 1.6; }
-
+  /* 顶级子文件夹过滤胶囊栏 */
   #folder-bar {
     display: none;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 10px 20px;
     overflow-x: auto;
-    background: var(--bg-elevated);
-    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-light);
   }
   #folder-bar.show { display: flex; }
-  #folder-bar::-webkit-scrollbar { height: 6px; }
+  #folder-bar::-webkit-scrollbar { height: 4px; }
+  #folder-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
   .folder-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: var(--bg);
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    background: var(--bg-base);
     border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 13px;
+    color: var(--text-muted);
+    font-size: 12.5px;
     white-space: nowrap;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background .12s, border-color .12s, color .12s;
+    transition: all 0.12s;
   }
-  .folder-pill:hover { border-color: var(--accent); color: var(--text); }
+  .folder-pill:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+    background: var(--bg-subtle);
+  }
   .folder-pill.active {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+    font-weight: 500;
+    box-shadow: 0 2px 6px rgba(224, 122, 95, 0.25);
   }
   .folder-pill .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
-    border: 1px solid rgba(255,255,255,.7);
   }
   .folder-pill .count {
     font-size: 11px;
-    opacity: .75;
+    opacity: 0.8;
   }
 
-  #grid { padding: 16px; }
+  /* 滚动主视口 */
+  #content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  #content-scroll::-webkit-scrollbar { width: 8px; }
+  #content-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* 空状态 */
+  #empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+    text-align: center;
+    gap: 16px;
+    background: var(--bg-surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    margin: 20px auto;
+    max-width: 560px;
+  }
+  #empty-state .empty-icon-wrap {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+  #empty-state h3 {
+    margin: 0;
+    font-size: 17px;
+    color: var(--text-main);
+  }
+  #empty-state .hint {
+    font-size: 13px;
+    max-width: 440px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* 分组与网格 */
   .group-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 16px 4px 12px;
-    margin-bottom: 14px;
+    padding: 16px 4px 10px;
+    margin-bottom: 12px;
     border-bottom: 1px solid var(--border);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 700;
   }
   .group-header:first-child { padding-top: 0; }
   .group-header .dot {
@@ -179,35 +580,39 @@
   .group-count {
     font-size: 12px;
     font-weight: 400;
-    color: var(--text-dim);
+    color: var(--text-light);
     white-space: nowrap;
   }
+
   .section-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
-    margin-bottom: 26px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
   }
 
+  /* 视频卡片 */
   .card {
-    background: var(--card-bg);
+    background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: transform .12s, border-color .12s, box-shadow .12s;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+    position: relative;
   }
   .card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: var(--accent);
-    box-shadow: 0 6px 16px rgba(23,124,176,.14);
+    box-shadow: var(--shadow-md);
   }
+
   .thumb-wrap {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: #0e1013;
+    background: #181614;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -218,67 +623,50 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.25s ease;
+  }
+  .card:hover .thumb-wrap img {
+    transform: scale(1.02);
   }
   .thumb-wrap .placeholder {
-    color: var(--text-dim);
-    opacity: .5;
+    color: rgba(255,255,255,0.4);
   }
   .duration-badge {
     position: absolute;
-    bottom: 6px;
-    right: 6px;
-    background: rgba(0,0,0,.75);
+    bottom: 7px;
+    right: 7px;
+    background: rgba(28, 23, 20, 0.78);
+    backdrop-filter: blur(4px);
     color: #fff;
     font-size: 11px;
-    padding: 2px 6px;
+    font-weight: 500;
+    padding: 2px 7px;
     border-radius: 4px;
     font-variant-numeric: tabular-nums;
   }
   .ext-badge {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    background: rgba(0,0,0,.6);
-    color: var(--text-dim);
+    top: 7px;
+    left: 7px;
+    background: rgba(28, 23, 20, 0.65);
+    backdrop-filter: blur(4px);
+    color: rgba(255,255,255,0.85);
     font-size: 10px;
+    font-weight: 600;
     padding: 2px 6px;
     border-radius: 4px;
     text-transform: uppercase;
   }
-  .card-body {
-    padding: 8px 10px;
-  }
-  .card-name {
-    font-size: 12.5px;
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .card-meta {
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 3px;
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-  }
-  .card-path {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    direction: rtl;
-    text-align: left;
-  }
 
   .card-feed-btn {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 28px;
-    height: 28px;
+    top: 7px;
+    right: 7px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: rgba(0,0,0,.55);
+    background: rgba(28, 23, 20, 0.75);
+    backdrop-filter: blur(4px);
     color: #fff;
     border: none;
     display: none;
@@ -287,11 +675,44 @@
     cursor: pointer;
     font-size: 12px;
     z-index: 2;
+    transition: background 0.15s, transform 0.15s;
   }
   .card:hover .card-feed-btn { display: flex; }
-  .card-feed-btn:hover { background: var(--accent); }
+  .card-feed-btn:hover {
+    background: var(--accent);
+    transform: scale(1.1);
+  }
 
-  /* Feed (swipe-browse) mode */
+  .card-body {
+    padding: 9px 12px 11px;
+  }
+  .card-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-main);
+  }
+  .card-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-path {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+    color: var(--text-light);
+  }
+
+  /* ---------- 沉浸式短视频流模式 (Feed Mode) ---------- */
   #feed {
     display: none;
     position: fixed;
@@ -328,30 +749,30 @@
   .feed-slide .feed-gradient {
     position: absolute;
     left: 0; right: 0; bottom: 0;
-    height: 140px;
-    background: linear-gradient(to top, rgba(0,0,0,.75), transparent);
+    height: 160px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.4) 60%, transparent);
     pointer-events: none;
   }
   .feed-slide .feed-info {
     position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 18px;
+    left: 20px;
+    right: 20px;
+    bottom: 24px;
     color: #fff;
     font-size: 13px;
-    text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
     pointer-events: none;
   }
   .feed-slide .feed-info .fname {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 3px;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .feed-slide .feed-info .fpath {
-    opacity: .7;
+    opacity: 0.75;
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -363,54 +784,63 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 56px;
+    font-size: 64px;
     color: #fff;
     opacity: 0;
     pointer-events: none;
-    text-shadow: 0 2px 8px rgba(0,0,0,.5);
-    transition: opacity .15s;
+    text-shadow: 0 3px 12px rgba(0,0,0,0.6);
+    transition: opacity 0.15s ease;
   }
-  .feed-slide.paused .pause-icon { opacity: .9; }
+  .feed-slide.paused .pause-icon { opacity: 0.9; }
 
   .feed-hud {
     display: none;
     position: fixed;
-    top: 14px;
-    left: 14px;
-    right: 14px;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     z-index: 210;
     align-items: center;
     justify-content: space-between;
   }
   .feed-hud button {
-    background: rgba(0,0,0,.45);
-    border: 1px solid rgba(255,255,255,.15);
+    background: rgba(30, 25, 20, 0.55);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18);
     color: #fff;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     font-size: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
   }
-  .feed-hud button:hover { background: rgba(255,255,255,.2); }
+  .feed-hud button:hover {
+    background: rgba(224, 122, 95, 0.85);
+    transform: scale(1.05);
+  }
   .feed-counter {
-    background: rgba(0,0,0,.45);
+    background: rgba(30, 25, 20, 0.55);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18);
     color: #fff;
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
     font-variant-numeric: tabular-nums;
   }
 
-  /* Player modal */
+  /* ---------- 弹窗全功能播放器 (Modal Player) ---------- */
   #modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.9);
+    background: rgba(25, 20, 18, 0.85);
+    backdrop-filter: blur(10px);
     z-index: 100;
     align-items: center;
     justify-content: center;
@@ -419,93 +849,190 @@
   #modal.show { display: flex; }
   #modal video {
     max-width: 92vw;
-    max-height: 78vh;
+    max-height: 80vh;
     background: #000;
-    border-radius: 4px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
   }
   #modal .modal-info {
-    color: var(--text);
+    color: #fff;
     font-size: 13px;
-    margin-top: 12px;
+    margin-top: 14px;
     max-width: 80vw;
     text-align: center;
-    color: var(--text-dim);
+    opacity: 0.85;
   }
   #modal .modal-controls {
     position: absolute;
-    top: 16px;
-    right: 20px;
-    display: flex;
-    gap: 8px;
+    top: 20px;
+    right: 24px;
   }
+  #modal-close {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  #modal-close:hover { background: rgba(255,255,255,0.28); }
+
   #modal .nav-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255,255,255,.08);
+    background: rgba(255,255,255,0.12);
     border: none;
     color: #fff;
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    font-size: 20px;
+    font-size: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.15s;
   }
-  #modal .nav-btn:hover { background: rgba(255,255,255,.18); }
-  #modal .nav-prev { left: 20px; }
-  #modal .nav-next { right: 20px; }
+  #modal .nav-btn:hover { background: var(--accent); }
+  #modal .nav-prev { left: 24px; }
+  #modal .nav-next { right: 24px; }
 
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  /* 提示条 Tooltip */
+  [data-tooltip] {
+    position: relative;
+  }
+  #sidebar.collapsed [data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #2D2724;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 99;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>📁 本地视频浏览器</h1>
-  <button id="btn-pick" class="primary">选择文件夹</button>
-  <input id="search" type="text" placeholder="搜索文件名…" disabled>
-  <select id="sort-key" disabled>
-    <option value="name">按文件名</option>
-    <option value="date">按修改时间</option>
-    <option value="size">按大小</option>
-  </select>
-  <button id="sort-dir" disabled title="切换升序/降序">↓</button>
-  <label class="checkbox">
-    <input type="checkbox" id="recursive" checked disabled>
-    包含子文件夹
-  </label>
-  <button id="btn-feed" disabled title="沉浸式竖屏刷视频">🔀 刷视频</button>
-  <label class="checkbox">
-    <input type="checkbox" id="feed-shuffle" disabled>
-    随机顺序
-  </label>
-  <div class="spacer"></div>
-  <div class="stats" id="stats"></div>
-</header>
+<div id="app-layout">
+  <!-- 可伸缩侧边栏 -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-wrap">
+        <div class="brand-logo">📼</div>
+        <div class="brand-info">
+          <span class="brand-title">随拾 · SuiShi</span>
+          <span class="brand-sub">本地短视频抽屉</span>
+        </div>
+      </div>
+      <button id="btn-toggle-sidebar" class="icon-btn" title="折叠/展开侧边栏 (Ctrl+B)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+      </button>
+    </div>
 
-<div id="folder-bar"></div>
+    <div class="sidebar-add-wrap">
+      <button id="btn-add-folder" class="btn-add-folder" title="添加/收藏本地视频目录">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>添加新目录</span>
+      </button>
+    </div>
 
-<div id="status-bar"></div>
+    <div class="sidebar-nav-title">
+      <span>已收藏目录</span>
+      <span id="sidebar-folder-count">0</span>
+    </div>
 
-<div id="empty-state">
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-    <path d="M4 4h16v16H4z" stroke-opacity=".4"/>
-    <path d="M10 9l5 3-5 3z"/>
-  </svg>
-  <div>点击「选择文件夹」来浏览本地视频</div>
-  <div class="hint">
-    使用浏览器的文件系统权限直接读取本地文件，不会上传任何数据。
-    仅支持 Chrome / Edge 等基于 Chromium 的浏览器。<br>
-    授权一次后，下次打开本页面会自动记住文件夹（可能需要再次确认权限）。
+    <div class="folder-list" id="sidebar-folder-list">
+      <!-- 动态渲染持久化目录列表 -->
+    </div>
+
+    <div class="sidebar-footer">
+      <span>随手拾起 · 片刻生活</span>
+      <span id="version-label">v1.2</span>
+    </div>
+  </aside>
+
+  <!-- 主内容展示区 -->
+  <div id="main-wrap">
+    <header>
+      <div class="header-left">
+        <button id="btn-open-sidebar" class="icon-btn" style="display:none;" title="展开侧边栏">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="search" type="text" placeholder="在当前抽屉中搜索文件名或路径…" disabled>
+      </div>
+
+      <select id="sort-key" disabled>
+        <option value="name">按文件名</option>
+        <option value="date">按修改时间</option>
+        <option value="size">按文件大小</option>
+      </select>
+      <button id="sort-dir" class="btn-normal" disabled title="切换升序/降序">↑</button>
+      <label class="checkbox">
+        <input type="checkbox" id="recursive" checked disabled>
+        包含子目录
+      </label>
+      <button id="btn-feed" class="btn-accent" disabled title="沉浸式竖屏刷视频">🔀 刷视频</button>
+      <label class="checkbox">
+        <input type="checkbox" id="feed-shuffle" disabled>
+        随机顺序
+      </label>
+
+      <div class="spacer"></div>
+      <div class="stats" id="stats"></div>
+    </header>
+
+    <!-- 顶级子目录快速切换胶囊栏 -->
+    <div id="folder-bar"></div>
+
+    <!-- 扫描进度与状态提示栏 -->
+    <div id="status-bar"></div>
+
+    <!-- 视频网格与滚动区域 -->
+    <div id="content-scroll">
+      <div id="empty-state">
+        <div class="empty-icon-wrap">📁</div>
+        <h3>开启你的随拾放映室</h3>
+        <div class="hint">
+          点击左侧「添加新目录」选取本地文件夹。<br>
+          所有视频均通过现代浏览器本地权限原生读取，100% 离线、私密且安全。
+        </div>
+        <button id="btn-pick-empty" class="btn-accent" style="margin-top:4px;">立即选择文件夹</button>
+      </div>
+
+      <div id="grid"></div>
+    </div>
   </div>
 </div>
 
-<div id="grid"></div>
-
+<!-- 弹窗播放器 -->
 <div id="modal">
   <div class="modal-controls">
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
@@ -516,6 +1043,7 @@
   <div class="modal-info" id="modal-info"></div>
 </div>
 
+<!-- 沉浸式竖屏刷视频模式 (Feed) -->
 <div class="feed-hud" id="feed-hud">
   <button id="feed-close" title="关闭 (Esc)">✕</button>
   <div class="feed-counter" id="feed-counter"></div>
@@ -529,7 +1057,13 @@
   const NATIVE_PLAYABLE = ['mp4','webm','ogg','ogv','m4v','mov'];
 
   const $ = (id) => document.getElementById(id);
-  const btnPick = $('btn-pick');
+  const sidebarEl = $('sidebar');
+  const btnToggleSidebar = $('btn-toggle-sidebar');
+  const btnAddFolder = $('btn-add-folder');
+  const sidebarFolderList = $('sidebar-folder-list');
+  const sidebarFolderCount = $('sidebar-folder-count');
+  const btnPickEmpty = $('btn-pick-empty');
+
   const searchInput = $('search');
   const sortKeySel = $('sort-key');
   const sortDirBtn = $('sort-dir');
@@ -554,35 +1088,42 @@
   const folderBarEl = $('folder-bar');
 
   const ROOT_GROUP = '（根目录）';
-  const CATEGORY_COLORS = ['#177CB0','#48C0A3','#DB5A6B','#FFA631','#8D4BBB','#21A675','#4B5CC4','#F2BE45','#F47983','#30DFF3'];
+  const CATEGORY_COLORS = ['#E07A5F','#48C0A3','#DB5A6B','#FFA631','#8D4BBB','#21A675','#4B5CC4','#F2BE45','#F47983','#30DFF3'];
   function colorForFolder(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
     return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
   }
 
+  // ---------- 应用级响应式状态 ----------
+  let savedFolders = [];   // Array<{ id: string, name: string, customName?: string, handle: FileSystemDirectoryHandle, addedAt: number, count?: number }>
+  let activeFolderId = null;
   let allVideos = [];      // {handle, name, path, ext, size, mtime}
-  let filtered = [];       // currently displayed, in order
+  let filtered = [];       // 当前过滤后的展示数组
   let currentModalIndex = -1;
-  let sortDir = -1;        // -1 desc (default: name asc actually), see below
-  let rootHandle = null;
+  let sortDir = 1;         // 1 asc, -1 desc (默认文件名按升序排序)
   let currentObjectUrl = null;
   let io = null;
-  let activeFolder = null; // null = show all folders grouped; string = filter to one top-level folder
+  let activeFolder = null; // 当前顶级子文件夹筛选（null 为全部）
   let hasFolderGroups = false;
 
   let feedList = [];
   let feedIndex = 0;
-  let feedMuted = localStorage.getItem('feedMuted') !== 'false'; // default muted
+  let feedMuted = localStorage.getItem('feedMuted') !== 'false';
   let feedActiveObs = null;
   let feedPosterObs = null;
-  let feedLoaded = new Set(); // slide indices with real video src loaded
+  let feedLoaded = new Set();
 
-  // ---------- IndexedDB persistence for the directory handle ----------
+  // ---------- IndexedDB 升级适配层 ----------
   function idbOpen() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('local-video-browser', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('kv');
+      const req = indexedDB.open('suishi-video-db', 2);
+      req.onupgradeneeded = (e) => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('kv')) {
+          db.createObjectStore('kv');
+        }
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
@@ -606,7 +1147,191 @@
     });
   }
 
-  // ---------- helpers ----------
+  // 兼容老版本 local-video-browser 数据平滑迁移
+  async function migrateLegacyIDB() {
+    try {
+      const legacyReq = indexedDB.open('local-video-browser', 1);
+      legacyReq.onsuccess = async () => {
+        const oldDb = legacyReq.result;
+        if (oldDb.objectStoreNames.contains('kv')) {
+          const tx = oldDb.transaction('kv', 'readonly');
+          const req = tx.objectStore('kv').get('dirHandle');
+          req.onsuccess = async () => {
+            const oldHandle = req.result;
+            if (oldHandle && !savedFolders.length) {
+              const legacyItem = {
+                id: 'folder_' + Date.now(),
+                name: oldHandle.name,
+                handle: oldHandle,
+                addedAt: Date.now()
+              };
+              savedFolders.push(legacyItem);
+              activeFolderId = legacyItem.id;
+              await saveFolderState();
+              renderSidebar();
+              loadActiveFolder();
+            }
+          };
+        }
+      };
+    } catch {}
+  }
+
+  async function saveFolderState() {
+    await idbSet('savedFolders', savedFolders);
+    await idbSet('activeFolderId', activeFolderId);
+  }
+
+  // ---------- 侧边栏折叠/展开与状态管理 ----------
+  function initSidebar() {
+    const isCollapsed = localStorage.getItem('suishi_sidebar_collapsed') === 'true';
+    if (isCollapsed) sidebarEl.classList.add('collapsed');
+
+    btnToggleSidebar.addEventListener('click', () => {
+      sidebarEl.classList.toggle('collapsed');
+      localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        sidebarEl.classList.toggle('collapsed');
+        localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+      }
+    });
+  }
+
+  function renderSidebar() {
+    sidebarFolderList.innerHTML = '';
+    sidebarFolderCount.textContent = savedFolders.length;
+
+    savedFolders.forEach((folder) => {
+      const item = document.createElement('div');
+      item.className = 'folder-item' + (folder.id === activeFolderId ? ' active' : '');
+      const displayName = folder.customName || folder.name;
+      item.setAttribute('data-tooltip', displayName);
+
+      const icon = document.createElement('div');
+      icon.className = 'folder-item-icon';
+      icon.textContent = folder.id === activeFolderId ? '🎬' : '📁';
+
+      const details = document.createElement('div');
+      details.className = 'folder-item-details';
+
+      const nameSpan = document.createElement('div');
+      nameSpan.className = 'folder-item-name';
+      nameSpan.textContent = displayName;
+      nameSpan.title = displayName;
+
+      const subSpan = document.createElement('div');
+      subSpan.className = 'folder-item-sub';
+      subSpan.textContent = folder.count != null ? `${folder.count} 个视频` : '点击载入';
+
+      details.appendChild(nameSpan);
+      details.appendChild(subSpan);
+
+      const actions = document.createElement('div');
+      actions.className = 'folder-item-actions';
+
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'folder-action-btn';
+      renameBtn.title = '重命名显示名称';
+      renameBtn.innerHTML = '✏️';
+      renameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const next = prompt('设置此目录在侧边栏中的别名：', displayName);
+        if (next !== null && next.trim()) {
+          folder.customName = next.trim();
+          saveFolderState();
+          renderSidebar();
+        }
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'folder-action-btn danger';
+      removeBtn.title = '从侧边栏移除（不删除硬盘文件）';
+      removeBtn.innerHTML = '✕';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`确定要从侧边栏移除「${displayName}」吗？\n（不会删除您磁盘中的视频文件）`)) {
+          removeFolder(folder.id);
+        }
+      });
+
+      actions.appendChild(renameBtn);
+      actions.appendChild(removeBtn);
+
+      item.appendChild(icon);
+      item.appendChild(details);
+      item.appendChild(actions);
+
+      item.addEventListener('click', () => switchFolder(folder.id));
+      sidebarFolderList.appendChild(item);
+    });
+  }
+
+  async function removeFolder(id) {
+    savedFolders = savedFolders.filter(f => f.id !== id);
+    if (activeFolderId === id) {
+      activeFolderId = savedFolders.length ? savedFolders[0].id : null;
+    }
+    await saveFolderState();
+    renderSidebar();
+    if (activeFolderId) {
+      switchFolder(activeFolderId);
+    } else {
+      allVideos = [];
+      filtered = [];
+      gridEl.innerHTML = '';
+      folderBarEl.classList.remove('show');
+      statsEl.textContent = '';
+      setControlsEnabled(false);
+      emptyState.style.display = 'flex';
+    }
+  }
+
+  async function switchFolder(id) {
+    if (!id) return;
+    activeFolderId = id;
+    await idbSet('activeFolderId', activeFolderId);
+    renderSidebar();
+    await loadActiveFolder();
+  }
+
+  async function addNewFolder() {
+    if (!window.showDirectoryPicker) {
+      alert('当前浏览器不支持 File System Access API，请使用 Chrome 或 Edge 打开本页面。');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      // 查重：若同名则提示或切换
+      const existing = savedFolders.find(f => f.name === handle.name);
+      if (existing) {
+        existing.handle = handle;
+        activeFolderId = existing.id;
+      } else {
+        const newFolder = {
+          id: 'f_' + Date.now(),
+          name: handle.name,
+          handle,
+          addedAt: Date.now()
+        };
+        savedFolders.unshift(newFolder);
+        activeFolderId = newFolder.id;
+      }
+      await saveFolderState();
+      renderSidebar();
+      await loadActiveFolder();
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error(err);
+    }
+  }
+
+  btnAddFolder.addEventListener('click', addNewFolder);
+  btnPickEmpty.addEventListener('click', addNewFolder);
+
+  // ---------- 格式与辅助工具 ----------
   function isVideoFile(name) {
     const ext = name.split('.').pop().toLowerCase();
     return VIDEO_EXT.includes(ext);
@@ -651,7 +1376,7 @@
     feedShuffleChk.disabled = !enabled;
   }
 
-  // ---------- folder scanning ----------
+  // ---------- 目录异步扫描管道 ----------
   async function* walk(dirHandle, path, recursive) {
     for await (const entry of dirHandle.values()) {
       if (entry.kind === 'file') {
@@ -662,35 +1387,70 @@
     }
   }
 
-  async function loadFolder(handle) {
-    rootHandle = handle;
+  async function loadActiveFolder() {
+    const cur = savedFolders.find(f => f.id === activeFolderId);
+    if (!cur) return;
+
+    // 检查权限
+    try {
+      const perm = await cur.handle.queryPermission({ mode: 'read' });
+      if (perm !== 'granted') {
+        emptyState.innerHTML = `
+          <div class="empty-icon-wrap">🔒</div>
+          <h3>需要重新确认读取权限</h3>
+          <div class="hint">浏览器安全策略要求在重新打开或恢复会话后确认对文件夹「${cur.customName || cur.name}」的读取权限。</div>
+          <button class="btn-accent" id="btn-reauth" style="margin-top:8px;">重新授权并开启</button>`;
+        emptyState.style.display = 'flex';
+        gridEl.innerHTML = '';
+        $('btn-reauth').addEventListener('click', async () => {
+          const p = await cur.handle.requestPermission({ mode: 'read' });
+          if (p === 'granted') loadActiveFolder();
+        });
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     allVideos = [];
     gridEl.innerHTML = '';
     emptyState.style.display = 'none';
-    setStatus('正在扫描文件夹…');
+    setStatus(`正在扫描「${cur.customName || cur.name}」中的视频…`);
     setControlsEnabled(false);
 
     const recursive = recursiveChk.checked;
     let count = 0;
-    for await (const { handle: fh, path } of walk(handle, '', recursive)) {
-      let file;
-      try { file = await fh.getFile(); } catch { continue; }
-      allVideos.push({
-        handle: fh,
-        name: fh.name,
-        path,
-        ext: extOf(fh.name),
-        size: file.size,
-        mtime: file.lastModified,
-      });
-      count++;
-      if (count % 25 === 0) setStatus(`正在扫描文件夹… 已找到 ${count} 个视频`);
+    try {
+      for await (const { handle: fh, path } of walk(cur.handle, '', recursive)) {
+        let file;
+        try { file = await fh.getFile(); } catch { continue; }
+        allVideos.push({
+          handle: fh,
+          name: fh.name,
+          path,
+          ext: extOf(fh.name),
+          size: file.size,
+          mtime: file.lastModified,
+        });
+        count++;
+        if (count % 25 === 0) setStatus(`正在扫描「${cur.customName || cur.name}」… 已找到 ${count} 个视频`);
+      }
+    } catch (err) {
+      console.error('扫描出错:', err);
     }
+
+    cur.count = allVideos.length;
+    saveFolderState();
+    renderSidebar();
+
     setStatus('');
     setControlsEnabled(true);
     emptyState.style.display = allVideos.length ? 'none' : 'flex';
     if (!allVideos.length) {
-      emptyState.querySelector('div:nth-child(2)') && (emptyState.querySelector('div:last-child').textContent = '该文件夹（含子文件夹）中没有找到视频文件');
+      emptyState.innerHTML = `
+        <div class="empty-icon-wrap">🍃</div>
+        <h3>这里空空如也</h3>
+        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频文件。</div>`;
     }
 
     const topKeys = new Set(allVideos.map(topFolderOf));
@@ -700,7 +1460,7 @@
     render();
   }
 
-  // ---------- filter + sort + group + render ----------
+  // ---------- 检索 + 排序 + 分组 + 渲染 ----------
   function sortGroup(items) {
     const key = sortKeySel.value;
     items.sort((a, b) => {
@@ -787,7 +1547,7 @@
     groups.forEach(g => filtered.push(...g.items));
 
     statsEl.textContent = allVideos.length
-      ? `${filtered.length} / ${allVideos.length} 个视频 · 共 ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
+      ? `${filtered.length} / ${allVideos.length} 个切片 · ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
       : '';
 
     gridEl.innerHTML = '';
@@ -901,8 +1661,7 @@
     }
   }
 
-  // Generates (and caches on the video item) a small thumbnail data URL + duration.
-  // Shared by the grid cards and the feed slides so a video is only decoded once.
+  // 离屏提取海报与时长 (带 Promise 缓存)
   function ensureThumbnail(v) {
     if (v._thumbPromise) return v._thumbPromise;
     v._thumbPromise = (async () => {
@@ -968,7 +1727,7 @@
     }
   }
 
-  // ---------- feed (swipe-browse) mode ----------
+  // ---------- 沉浸式短视频流模式 (Feed) ----------
   function shuffleArray(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -1141,7 +1900,7 @@
     if (cur) cur._video.muted = feedMuted;
   });
 
-  // ---------- modal player ----------
+  // ---------- 弹窗全功能播放器 ----------
   async function openModal(idx) {
     currentModalIndex = idx;
     const v = filtered[idx];
@@ -1177,6 +1936,7 @@
   navPrev.addEventListener('click', () => navigate(-1));
   navNext.addEventListener('click', () => navigate(1));
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
   document.addEventListener('keydown', (e) => {
     if (feedEl.classList.contains('show')) {
       if (e.key === 'Escape') closeFeed();
@@ -1191,7 +1951,7 @@
     else if (e.key === 'ArrowRight') navigate(1);
   });
 
-  // ---------- controls ----------
+  // ---------- 检索与排序事件 ----------
   searchInput.addEventListener('input', debounce(render, 150));
   sortKeySel.addEventListener('change', render);
   sortDirBtn.addEventListener('click', () => {
@@ -1199,56 +1959,47 @@
     sortDirBtn.textContent = sortDir === 1 ? '↑' : '↓';
     render();
   });
-  recursiveChk.addEventListener('change', () => { if (rootHandle) loadFolder(rootHandle); });
+  recursiveChk.addEventListener('change', () => { if (activeFolderId) loadActiveFolder(); });
 
   function debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
-  // ---------- folder picking ----------
-  async function pickFolder() {
+  // ---------- 启动引导与持久化恢复 ----------
+  async function bootstrap() {
+    initSidebar();
+    renderSidebar();
+    if ($('btn-open-sidebar')) {
+      $('btn-open-sidebar').addEventListener('click', () => {
+        sidebarEl.classList.toggle('collapsed');
+        localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+      });
+    }
     if (!window.showDirectoryPicker) {
-      alert('当前浏览器不支持 File System Access API，请使用 Chrome 或 Edge 打开本页面。');
+      setStatus('提示：当前浏览器不支持本地文件夹原生读写，推荐使用 Chrome / Edge。');
       return;
     }
-    try {
-      const handle = await window.showDirectoryPicker({ mode: 'read' });
-      await idbSet('dirHandle', handle);
-      await loadFolder(handle);
-    } catch (err) {
-      if (err.name !== 'AbortError') console.error(err);
-    }
-  }
-  btnPick.addEventListener('click', pickFolder);
-
-  // ---------- restore previous folder on load ----------
-  async function tryRestore() {
-    if (!window.showDirectoryPicker) return;
-    let handle;
-    try { handle = await idbGet('dirHandle'); } catch { return; }
-    if (!handle) return;
 
     try {
-      const perm = await handle.queryPermission({ mode: 'read' });
-      if (perm === 'granted') {
-        await loadFolder(handle);
+      const storedFolders = await idbGet('savedFolders');
+      const storedActiveId = await idbGet('activeFolderId');
+      if (Array.isArray(storedFolders) && storedFolders.length) {
+        savedFolders = storedFolders;
+        activeFolderId = storedActiveId && savedFolders.some(f => f.id === storedActiveId)
+          ? storedActiveId
+          : savedFolders[0].id;
+        renderSidebar();
+        await loadActiveFolder();
       } else {
-        emptyState.innerHTML = `
-          <div>上次浏览过：<b>${handle.name}</b></div>
-          <div class="hint">需要重新确认文件夹读取权限</div>
-          <button class="primary" id="btn-reauth" style="margin-top:8px;">重新授权并打开</button>`;
-        $('btn-reauth').addEventListener('click', async () => {
-          const p = await handle.requestPermission({ mode: 'read' });
-          if (p === 'granted') loadFolder(handle);
-        });
+        await migrateLegacyIDB();
       }
     } catch (err) {
-      console.error(err);
+      console.error('初始化存储失败:', err);
     }
   }
 
-  tryRestore();
+  bootstrap();
 })();
 </script>
 </body>
