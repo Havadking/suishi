@@ -316,14 +316,37 @@
   }
 
   .sidebar-footer {
-    padding: 12px 14px;
+    padding: 10px 14px;
     border-top: 1px solid var(--border-light);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     font-size: 11px;
     color: var(--text-light);
     background: var(--bg-surface);
+  }
+  .sidebar-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .btn-clear-cache {
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    transition: all 0.15s ease;
+  }
+  .btn-clear-cache:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-subtle);
   }
   #sidebar.collapsed .sidebar-footer {
     display: none;
@@ -1170,8 +1193,13 @@
     </div>
 
     <div class="sidebar-footer">
-      <span>随手拾起 · 片刻生活</span>
-      <span id="version-label">v1.2</span>
+      <div class="sidebar-footer-row">
+        <span>随手拾起 · 片刻生活</span>
+        <span id="version-label">v1.2</span>
+      </div>
+      <button id="btn-clear-cache" class="btn-clear-cache" title="清理已缓存的封面海报，释放浏览器存储空间">
+        🧹 清理缩略图缓存
+      </button>
     </div>
   </aside>
 
@@ -1468,14 +1496,17 @@
   }
   let feedMuted = localStorage.getItem('feedMuted') !== 'false';
 
-  // ---------- IndexedDB 升级适配层 ----------
+  // ---------- IndexedDB 升级适配层 (含持久化缩略图池) ----------
   function idbOpen() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('suishi-video-db', 2);
+      const req = indexedDB.open('suishi-video-db', 3);
       req.onupgradeneeded = (e) => {
         const db = req.result;
         if (!db.objectStoreNames.contains('kv')) {
           db.createObjectStore('kv');
+        }
+        if (!db.objectStoreNames.contains('thumbnails')) {
+          db.createObjectStore('thumbnails');
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -1499,6 +1530,100 @@
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+  }
+
+  // 缩略图持久化存取与清理
+  function getThumbnailCacheKey(v) {
+    const relPath = (v.path ? v.path + '/' : '') + v.name;
+    return `${activeFolderId || ''}:${relPath}:${v.size}:${v.mtime}`;
+  }
+
+  async function idbGetThumbnail(key) {
+    try {
+      const db = await idbOpen();
+      return new Promise((resolve) => {
+        const tx = db.transaction('thumbnails', 'readonly');
+        const req = tx.objectStore('thumbnails').get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async function idbSetThumbnail(key, data) {
+    try {
+      const db = await idbOpen();
+      return new Promise((resolve) => {
+        const tx = db.transaction('thumbnails', 'readwrite');
+        tx.objectStore('thumbnails').put(data, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch {}
+  }
+
+  async function idbClearThumbnails() {
+    try {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('thumbnails', 'readwrite');
+        const req = tx.objectStore('thumbnails').clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // ---------- 视频断点续播记忆系统 ----------
+  function getProgressKey(v) {
+    if (!v) return '';
+    const rel = (v.path ? v.path + '/' : '') + v.name;
+    return `${activeFolderId || ''}:${rel}`;
+  }
+
+  function getSavedProgress(v) {
+    try {
+      const raw = localStorage.getItem('suishi_play_progress');
+      if (!raw) return null;
+      const map = JSON.parse(raw);
+      return map[getProgressKey(v)] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function savePlaybackProgress(v, currentTime, duration) {
+    if (!v || !duration || !isFinite(duration) || duration <= 0) return;
+    const key = getProgressKey(v);
+    if (!key) return;
+
+    try {
+      const raw = localStorage.getItem('suishi_play_progress');
+      const map = raw ? JSON.parse(raw) : {};
+
+      // 如果剩余不足 5 秒或已接近末尾，清除续播记录视为看完
+      if (duration - currentTime <= 5 || currentTime >= duration - 1) {
+        if (map[key]) {
+          delete map[key];
+          localStorage.setItem('suishi_play_progress', JSON.stringify(map));
+        }
+        return;
+      }
+
+      // 播放超过 5 秒且剩余时长大于 10 秒时保存
+      if (currentTime >= 5 && duration - currentTime > 10) {
+        map[key] = {
+          time: Math.round(currentTime),
+          duration: Math.round(duration),
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('suishi_play_progress', JSON.stringify(map));
+      }
+    } catch {}
   }
 
   // 兼容老版本 local-video-browser 数据平滑迁移
@@ -1553,6 +1678,20 @@
         localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
       }
     });
+
+    const btnClearCache = $('btn-clear-cache');
+    if (btnClearCache) {
+      btnClearCache.addEventListener('click', async () => {
+        if (confirm('确定要清空所有已保存的视频缩略图海报缓存吗？\n（这会释放浏览器本地存储，下次浏览时将重新离屏生成，不影响您的磁盘文件）')) {
+          await idbClearThumbnails();
+          allVideos.forEach(v => { delete v._thumbPromise; });
+          setStatus('已成功清空封面海报缓存池');
+          setTimeout(() => {
+            if (statusBar.textContent === '已成功清空封面海报缓存池') setStatus('');
+          }, 3000);
+        }
+      });
+    }
   }
 
   function renderSidebar() {
@@ -1958,6 +2097,67 @@
     keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k), k)));
   }
 
+  // ---------- 大目录分批渐进式挂载 (Chunked Append) ----------
+  const CHUNK_SIZE = 60;
+  let renderQueue = [];
+  let renderedCount = 0;
+  let groupSectionMap = new Map();
+  const contentScroll = $('content-scroll');
+
+  function renderNextChunk() {
+    if (renderedCount >= renderQueue.length) return;
+
+    const nextBatch = renderQueue.slice(renderedCount, renderedCount + CHUNK_SIZE);
+    nextBatch.forEach(entry => {
+      const { item, idx, groupName, groupTotal } = entry;
+
+      let sectionGrid = groupSectionMap.get(groupName);
+      if (!sectionGrid) {
+        if (hasFolderGroups && groupName) {
+          const header = document.createElement('div');
+          header.className = 'group-header';
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          dot.style.background = colorForFolder(groupName);
+          const name = document.createElement('span');
+          name.className = 'group-name';
+          name.textContent = groupName;
+          const count = document.createElement('span');
+          count.className = 'group-count';
+          count.textContent = `${groupTotal} 个视频`;
+          header.appendChild(dot);
+          header.appendChild(name);
+          header.appendChild(count);
+          gridEl.appendChild(header);
+        }
+        sectionGrid = document.createElement('div');
+        sectionGrid.className = 'section-grid';
+        gridEl.appendChild(sectionGrid);
+        groupSectionMap.set(groupName, sectionGrid);
+      }
+
+      sectionGrid.appendChild(buildCard(item, idx));
+    });
+
+    renderedCount += nextBatch.length;
+  }
+
+  // 监听视口滚动实现无感自动追加后续切片
+  let scrollTicking = false;
+  contentScroll.addEventListener('scroll', () => {
+    if (scrollTicking) return;
+    scrollTicking = true;
+    requestAnimationFrame(() => {
+      if (renderedCount < renderQueue.length) {
+        const remaining = contentScroll.scrollHeight - contentScroll.scrollTop - contentScroll.clientHeight;
+        if (remaining < 600) {
+          renderNextChunk();
+        }
+      }
+      scrollTicking = false;
+    });
+  });
+
   function render() {
     if (io) { io.disconnect(); }
     io = new IntersectionObserver(onIntersect, { rootMargin: '400px' });
@@ -1987,43 +2187,30 @@
     }
 
     filtered = [];
-    groups.forEach(g => filtered.push(...g.items));
+    renderQueue = [];
+    renderedCount = 0;
+    groupSectionMap.clear();
+    gridEl.innerHTML = '';
+
+    let idx = 0;
+    groups.forEach(g => {
+      g.items.forEach(v => {
+        filtered.push(v);
+        renderQueue.push({
+          item: v,
+          idx: idx++,
+          groupName: g.name,
+          groupTotal: g.items.length
+        });
+      });
+    });
 
     statsEl.textContent = allVideos.length
       ? `${filtered.length} / ${allVideos.length} 个切片 · ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
       : '';
 
-    gridEl.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    let idx = 0;
-    groups.forEach(g => {
-      if (!g.items.length) return;
-      if (hasFolderGroups) {
-        const header = document.createElement('div');
-        header.className = 'group-header';
-        const dot = document.createElement('span');
-        dot.className = 'dot';
-        dot.style.background = colorForFolder(g.name);
-        const name = document.createElement('span');
-        name.className = 'group-name';
-        name.textContent = g.name;
-        const count = document.createElement('span');
-        count.className = 'group-count';
-        count.textContent = `${g.items.length} 个视频`;
-        header.appendChild(dot);
-        header.appendChild(name);
-        header.appendChild(count);
-        frag.appendChild(header);
-      }
-      const sectionGrid = document.createElement('div');
-      sectionGrid.className = 'section-grid';
-      g.items.forEach(v => {
-        sectionGrid.appendChild(buildCard(v, idx));
-        idx++;
-      });
-      frag.appendChild(sectionGrid);
-    });
-    gridEl.appendChild(frag);
+    // 首屏快速挂载首批（60 个）
+    renderNextChunk();
   }
 
   function buildCard(v, idx) {
@@ -2113,11 +2300,23 @@
     }
   }
 
-  // 离屏提取海报与时长 (带 Promise 缓存)
+  // 离屏提取海报与时长 (带 IndexedDB 持久化缓存池)
   function ensureThumbnail(v) {
     if (v._thumbPromise) return v._thumbPromise;
     v._thumbPromise = (async () => {
       if (!NATIVE_PLAYABLE.includes(v.ext)) return null;
+      const cacheKey = getThumbnailCacheKey(v);
+
+      // 1. 优先尝试从 IndexedDB 读取持久化缓存 (0ms 纯本地秒开)
+      try {
+        const cached = await idbGetThumbnail(cacheKey);
+        if (cached && cached.dataUrl) {
+          if (cached.duration && !v._duration) v._duration = cached.duration;
+          return cached.dataUrl;
+        }
+      } catch {}
+
+      // 2. 未命中缓存，进入离屏视频抽取管线
       let file, url;
       try {
         file = await v.handle.getFile();
@@ -2152,6 +2351,14 @@
               ctx.drawImage(vid, (320 - dw) / 2, (180 - dh) / 2, dw, dh);
               const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
               cleanup();
+
+              // 异步写入 IndexedDB 缓存池
+              idbSetThumbnail(cacheKey, {
+                dataUrl,
+                duration: v._duration,
+                cachedAt: Date.now()
+              });
+
               resolve(dataUrl);
               return;
             }
@@ -2339,6 +2546,9 @@
   function unloadFeedSlideSrc(slide) {
     const idx = Number(slide.dataset.idx);
     if (!feedLoaded.has(idx)) return;
+    if (slide._srcVideo && slide._video.duration) {
+      savePlaybackProgress(slide._srcVideo, slide._video.currentTime, slide._video.duration);
+    }
     slide._video.pause();
     slide._video.removeAttribute('src');
     slide._video.load();
@@ -2358,6 +2568,11 @@
           if (i === feedIndex && feedEl.classList.contains('show')) {
             slide._video.volume = getSavedVolume();
             slide._video.muted = feedMuted;
+            const prog = getSavedProgress(slide._srcVideo);
+            if (prog && prog.time >= 5 && slide._video.duration && (slide._video.duration - prog.time > 8)) {
+              slide._video.currentTime = prog.time;
+              showFeedHud(`已恢复至 ${fmtDuration(prog.time)} 处播放`);
+            }
             slide._video.play().catch(() => {});
           }
         });
@@ -2456,6 +2671,7 @@
 
     if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl = URL.createObjectURL(file);
+    modalVideo.playbackRate = 1.0;
     modalVideo.src = currentObjectUrl;
     modalVideo.volume = getSavedVolume();
     modalVideo.muted = getSavedMuted();
@@ -2463,9 +2679,42 @@
     modal.classList.add('show');
     navPrev.style.visibility = idx > 0 ? 'visible' : 'hidden';
     navNext.style.visibility = idx < filtered.length - 1 ? 'visible' : 'hidden';
+
+    // 检查并恢复断点续播进度
+    const prog = getSavedProgress(v);
+    if (prog && prog.time >= 5) {
+      modalVideo.addEventListener('loadedmetadata', () => {
+        if (modalVideo.duration && (modalVideo.duration - prog.time > 8)) {
+          modalVideo.currentTime = prog.time;
+          showModalHud(`已恢复至 ${fmtDuration(prog.time)} 处播放`);
+        }
+      }, { once: true });
+    }
   }
 
+  let modalProgressTimer = null;
+  modalVideo.addEventListener('timeupdate', () => {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+      const curV = filtered[currentModalIndex];
+      if (!modalProgressTimer) {
+        modalProgressTimer = setTimeout(() => {
+          modalProgressTimer = null;
+          savePlaybackProgress(curV, modalVideo.currentTime, modalVideo.duration);
+        }, 2000);
+      }
+    }
+  });
+
+  modalVideo.addEventListener('pause', () => {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+      savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
+    }
+  });
+
   function closeModal() {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+      savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
+    }
     modal.classList.remove('show');
     modalVideo.pause();
     modalVideo.removeAttribute('src');
