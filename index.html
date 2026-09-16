@@ -658,6 +658,12 @@
     border-radius: 4px;
     text-transform: uppercase;
   }
+  .ext-badge.non-native {
+    background: rgba(229, 83, 83, 0.88);
+    color: #fff;
+    font-size: 9.5px;
+    letter-spacing: 0.3px;
+  }
 
   .card-feed-btn {
     position: absolute;
@@ -794,6 +800,76 @@
   }
   .feed-slide.paused .pause-icon { opacity: 0.9; }
 
+  /* Feed 模式底部精细进度条 */
+  .feed-scrubber {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 18px;
+    display: flex;
+    align-items: flex-end;
+    cursor: pointer;
+    z-index: 25;
+    padding: 0 0 2px 0;
+    user-select: none;
+    touch-action: none;
+  }
+  .feed-scrubber-track {
+    position: relative;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.28);
+    transition: height 0.15s ease;
+  }
+  .feed-scrubber:hover .feed-scrubber-track,
+  .feed-scrubber.dragging .feed-scrubber-track {
+    height: 6px;
+  }
+  .feed-scrubber-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    position: relative;
+    pointer-events: none;
+  }
+  .feed-scrubber-thumb {
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    transition: transform 0.15s ease;
+    pointer-events: none;
+  }
+  .feed-scrubber:hover .feed-scrubber-thumb,
+  .feed-scrubber.dragging .feed-scrubber-thumb {
+    transform: translateY(-50%) scale(1);
+  }
+  .feed-scrubber-time {
+    position: absolute;
+    bottom: 14px;
+    transform: translateX(-50%);
+    background: rgba(20, 18, 16, 0.88);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+    display: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .feed-scrubber:hover .feed-scrubber-time,
+  .feed-scrubber.dragging .feed-scrubber-time {
+    display: block;
+  }
+
   .feed-hud {
     display: none;
     position: fixed;
@@ -867,8 +943,12 @@
     position: absolute;
     top: 20px;
     right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 105;
   }
-  #modal-close {
+  #modal-close, #modal-fullscreen {
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.25);
     color: #fff;
@@ -877,8 +957,11 @@
     cursor: pointer;
     font-size: 13px;
     transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  #modal-close:hover { background: rgba(255,255,255,0.28); }
+  #modal-close:hover, #modal-fullscreen:hover { background: rgba(255,255,255,0.28); }
 
   #modal .nav-btn {
     position: absolute;
@@ -920,6 +1003,129 @@
     z-index: 99;
     box-shadow: 0 4px 12px rgba(0,0,0,0.18);
     pointer-events: none;
+  }
+
+  /* HUD 居中浮层提示 */
+  .player-hud {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: rgba(20, 18, 16, 0.85);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: var(--radius-full);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 220;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    font-variant-numeric: tabular-nums;
+  }
+  .player-hud.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* 非原生格式拦截弹窗 */
+  .custom-dialog-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(25, 20, 18, 0.65);
+    backdrop-filter: blur(6px);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .custom-dialog-backdrop.show {
+    display: flex;
+  }
+  .custom-dialog {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 480px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    animation: dialogIn 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  @keyframes dialogIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .dialog-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin: 0 auto 16px;
+  }
+  .custom-dialog h3 {
+    margin: 0 0 10px;
+    font-size: 17px;
+    color: var(--text-main);
+  }
+  .dialog-desc {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0 0 16px;
+    text-align: left;
+    background: var(--bg-subtle);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+  }
+  .dialog-path-box {
+    text-align: left;
+    background: var(--bg-base);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .path-label {
+    color: var(--text-light);
+    flex-shrink: 0;
+  }
+  .path-text {
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* 刷新按钮旋转动画 */
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .is-spinning svg {
+    animation: spin 0.8s linear infinite;
   }
 </style>
 </head>
@@ -990,6 +1196,12 @@
         <input id="search" type="text" placeholder="在当前抽屉中搜索文件名或路径…" disabled>
       </div>
 
+      <button id="btn-refresh" class="icon-btn" disabled title="刷新当前目录 (R)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      </button>
+
       <select id="sort-key" disabled>
         <option value="name">按文件名</option>
         <option value="date">按修改时间</option>
@@ -1036,10 +1248,12 @@
 <!-- 弹窗播放器 -->
 <div id="modal">
   <div class="modal-controls">
+    <button id="modal-fullscreen" title="全屏 (F)">⛶ 全屏</button>
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
   </div>
   <button class="nav-btn nav-prev" id="nav-prev">‹</button>
   <video id="modal-video" controls autoplay></video>
+  <div id="modal-hud" class="player-hud"></div>
   <button class="nav-btn nav-next" id="nav-next">›</button>
   <div class="modal-info" id="modal-info"></div>
 </div>
@@ -1048,9 +1262,33 @@
 <div class="feed-hud" id="feed-hud">
   <button id="feed-close" title="关闭 (Esc)">✕</button>
   <div class="feed-counter" id="feed-counter"></div>
-  <button id="feed-mute" title="静音/取消静音">🔇</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button id="feed-fullscreen" title="全屏 (F)">⛶</button>
+    <button id="feed-mute" title="静音/取消静音">🔇</button>
+  </div>
 </div>
+<div id="feed-hud-toast" class="player-hud"></div>
 <div id="feed"></div>
+
+<!-- 非原生格式拦截弹窗 -->
+<div id="non-playable-modal" class="custom-dialog-backdrop">
+  <div class="custom-dialog">
+    <div class="dialog-icon-wrap">⚠️</div>
+    <h3 id="np-title">无法在浏览器中直接播放</h3>
+    <div class="dialog-desc" id="np-desc">
+      当前视频为 <strong id="np-format">MKV</strong> 格式，受现代浏览器内置解码器限制无法直接播放。<br>
+      建议使用系统默认播放器（如 VLC、PotPlayer）打开。
+    </div>
+    <div class="dialog-path-box">
+      <span class="path-label">文件路径：</span>
+      <span class="path-text" id="np-path"></span>
+    </div>
+    <div class="dialog-actions">
+      <button id="btn-np-copy" class="btn-normal">📋 复制相对路径</button>
+      <button id="btn-np-close" class="btn-accent">知道了</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -1087,6 +1325,99 @@
   const feedMuteBtn = $('feed-mute');
   const feedCloseBtn = $('feed-close');
   const folderBarEl = $('folder-bar');
+
+  const btnRefresh = $('btn-refresh');
+  const modalFullscreenBtn = $('modal-fullscreen');
+  const modalHud = $('modal-hud');
+  const feedFullscreenBtn = $('feed-fullscreen');
+  const feedHudToast = $('feed-hud-toast');
+  const npModal = $('non-playable-modal');
+  const npFormat = $('np-format');
+  const npPath = $('np-path');
+  const btnNpCopy = $('btn-np-copy');
+  const btnNpClose = $('btn-np-close');
+
+  const SPEED_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+  let modalHudTimer = null;
+  function showModalHud(text) {
+    if (!modalHud) return;
+    modalHud.textContent = text;
+    modalHud.classList.add('show');
+    clearTimeout(modalHudTimer);
+    modalHudTimer = setTimeout(() => modalHud.classList.remove('show'), 800);
+  }
+
+  let feedHudTimer = null;
+  function showFeedHud(text) {
+    if (!feedHudToast) return;
+    feedHudToast.textContent = text;
+    feedHudToast.classList.add('show');
+    clearTimeout(feedHudTimer);
+    feedHudTimer = setTimeout(() => feedHudToast.classList.remove('show'), 800);
+  }
+
+  function stepPlaybackSpeed(videoEl, direction) {
+    if (!videoEl) return 1.0;
+    const cur = videoEl.playbackRate || 1.0;
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < SPEED_LEVELS.length; i++) {
+      const diff = Math.abs(SPEED_LEVELS[i] - cur);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      }
+    }
+    const nextIdx = Math.max(0, Math.min(SPEED_LEVELS.length - 1, closestIdx + direction));
+    const nextSpeed = SPEED_LEVELS[nextIdx];
+    videoEl.playbackRate = nextSpeed;
+    return nextSpeed;
+  }
+
+  function toggleFullscreen(elem) {
+    if (!document.fullscreenElement) {
+      if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(() => {});
+    }
+  }
+
+  // ---------- 非原生格式弹窗逻辑 ----------
+  let currentNpVideo = null;
+  function openNonPlayableDialog(v) {
+    currentNpVideo = v;
+    npFormat.textContent = (v.ext || '').toUpperCase();
+    const fullRelPath = (v.path ? v.path + '/' : '') + v.name;
+    npPath.textContent = fullRelPath;
+    btnNpCopy.textContent = '📋 复制相对路径';
+    npModal.classList.add('show');
+  }
+
+  function closeNonPlayableDialog() {
+    npModal.classList.remove('show');
+    currentNpVideo = null;
+  }
+
+  btnNpClose.addEventListener('click', closeNonPlayableDialog);
+  npModal.addEventListener('click', (e) => {
+    if (e.target === npModal) closeNonPlayableDialog();
+  });
+
+  btnNpCopy.addEventListener('click', async () => {
+    if (!currentNpVideo) return;
+    const fullRelPath = (currentNpVideo.path ? currentNpVideo.path + '/' : '') + currentNpVideo.name;
+    try {
+      await navigator.clipboard.writeText(fullRelPath);
+      btnNpCopy.textContent = '✓ 已复制到剪贴板！';
+      setTimeout(() => {
+        if (btnNpCopy) btnNpCopy.textContent = '📋 复制相对路径';
+      }, 2000);
+    } catch {
+      prompt('请按 Ctrl+C 复制文件路径：', fullRelPath);
+    }
+  });
 
   const ROOT_GROUP = '（根目录）';
   const CATEGORY_COLORS = ['#E07A5F','#48C0A3','#DB5A6B','#FFA631','#8D4BBB','#21A675','#4B5CC4','#F2BE45','#F47983','#30DFF3'];
@@ -1392,6 +1723,7 @@
   }
   function setControlsEnabled(enabled) {
     searchInput.disabled = !enabled;
+    btnRefresh.disabled = !enabled;
     sortKeySel.disabled = !enabled;
     sortDirBtn.disabled = !enabled;
     recursiveChk.disabled = !enabled;
@@ -1482,6 +1814,94 @@
 
     render();
   }
+
+  // ---------- 目录一键重新扫描 (增量感知) ----------
+  async function rescanActiveFolder() {
+    const cur = savedFolders.find(f => f.id === activeFolderId);
+    if (!cur || !cur.handle) return;
+    if (btnRefresh.classList.contains('is-spinning')) return;
+
+    btnRefresh.classList.add('is-spinning');
+    setStatus(`正在重新扫描「${cur.customName || cur.name}」…`);
+    setControlsEnabled(false);
+
+    const recursive = recursiveChk.checked;
+    const getKey = (v) => `${v.path ? v.path + '/' : ''}${v.name}`;
+    const oldMap = new Map(allVideos.map(v => [getKey(v), v]));
+    const scannedVideos = [];
+    let addedCount = 0;
+
+    try {
+      for await (const { handle: fh, path } of walk(cur.handle, '', recursive)) {
+        let file;
+        try { file = await fh.getFile(); } catch { continue; }
+        const key = `${path ? path + '/' : ''}${fh.name}`;
+        const existing = oldMap.get(key);
+        if (existing) {
+          if (existing.mtime === file.lastModified && existing.size === file.size) {
+            existing.handle = fh;
+            scannedVideos.push(existing);
+          } else {
+            scannedVideos.push({
+              handle: fh,
+              name: fh.name,
+              path,
+              ext: extOf(fh.name),
+              size: file.size,
+              mtime: file.lastModified,
+            });
+          }
+          oldMap.delete(key);
+        } else {
+          addedCount++;
+          scannedVideos.push({
+            handle: fh,
+            name: fh.name,
+            path,
+            ext: extOf(fh.name),
+            size: file.size,
+            mtime: file.lastModified,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('重新扫描出错:', err);
+    }
+
+    const removedCount = oldMap.size;
+    allVideos = scannedVideos;
+    cur.count = allVideos.length;
+    await saveFolderState();
+    renderSidebar();
+
+    setControlsEnabled(true);
+    btnRefresh.classList.remove('is-spinning');
+
+    emptyState.style.display = allVideos.length ? 'none' : 'flex';
+    if (!allVideos.length) {
+      emptyState.innerHTML = `
+        <div class="empty-icon-wrap">🍃</div>
+        <h3>这里空空如也</h3>
+        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频文件。</div>`;
+    }
+
+    const topKeys = new Set(allVideos.map(topFolderOf));
+    hasFolderGroups = topKeys.size > 1;
+    render();
+
+    if (addedCount > 0 || removedCount > 0) {
+      setStatus(`扫描完毕：新增 ${addedCount} 个，移除 ${removedCount} 个视频`);
+    } else {
+      setStatus(`目录已是最新状态，共 ${allVideos.length} 个视频`);
+    }
+    setTimeout(() => {
+      if (statusBar.textContent.startsWith('扫描完毕') || statusBar.textContent.startsWith('目录已是最新')) {
+        setStatus('');
+      }
+    }, 4000);
+  }
+
+  btnRefresh.addEventListener('click', rescanActiveFolder);
 
   // ---------- 检索 + 排序 + 分组 + 渲染 ----------
   function sortGroup(items) {
@@ -1607,6 +2027,7 @@
   }
 
   function buildCard(v, idx) {
+    const isPlayable = NATIVE_PLAYABLE.includes(v.ext);
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.idx = idx;
@@ -1620,8 +2041,8 @@
     thumbWrap.appendChild(placeholder);
 
     const extBadge = document.createElement('div');
-    extBadge.className = 'ext-badge';
-    extBadge.textContent = v.ext;
+    extBadge.className = 'ext-badge' + (!isPlayable ? ' non-native' : '');
+    extBadge.textContent = isPlayable ? v.ext : `${v.ext} · 需外部播放`;
     thumbWrap.appendChild(extBadge);
 
     const durBadge = document.createElement('div');
@@ -1629,16 +2050,18 @@
     durBadge.style.display = 'none';
     thumbWrap.appendChild(durBadge);
 
-    const feedBtn = document.createElement('button');
-    feedBtn.type = 'button';
-    feedBtn.className = 'card-feed-btn';
-    feedBtn.title = '从这里进入刷视频模式';
-    feedBtn.textContent = '▶';
-    feedBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openFeed(idx);
-    });
-    thumbWrap.appendChild(feedBtn);
+    if (isPlayable) {
+      const feedBtn = document.createElement('button');
+      feedBtn.type = 'button';
+      feedBtn.className = 'card-feed-btn';
+      feedBtn.title = '从这里进入刷视频模式';
+      feedBtn.textContent = '▶';
+      feedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openFeed(idx);
+      });
+      thumbWrap.appendChild(feedBtn);
+    }
 
     card.appendChild(thumbWrap);
 
@@ -1669,7 +2092,13 @@
     card._durBadge = durBadge;
     card._video = v;
 
-    card.addEventListener('click', () => openModal(idx));
+    card.addEventListener('click', () => {
+      if (!isPlayable) {
+        openNonPlayableDialog(v);
+      } else {
+        openModal(idx);
+      }
+    });
     io.observe(card);
 
     return card;
@@ -1797,10 +2226,84 @@
     pauseIcon.className = 'pause-icon';
     pauseIcon.textContent = '►';
 
+    // 交互式进度条 (Interactive Scrubber)
+    const scrubber = document.createElement('div');
+    scrubber.className = 'feed-scrubber';
+    const track = document.createElement('div');
+    track.className = 'feed-scrubber-track';
+    const bar = document.createElement('div');
+    bar.className = 'feed-scrubber-bar';
+    const thumb = document.createElement('div');
+    thumb.className = 'feed-scrubber-thumb';
+    const timeTooltip = document.createElement('div');
+    timeTooltip.className = 'feed-scrubber-time';
+    track.appendChild(bar);
+    track.appendChild(thumb);
+    track.appendChild(timeTooltip);
+    scrubber.appendChild(track);
+
+    let isDragging = false;
+    let wasPlaying = false;
+
+    video.addEventListener('timeupdate', () => {
+      if (!isDragging && video.duration && isFinite(video.duration)) {
+        const pct = Math.max(0, Math.min(100, (video.currentTime / video.duration) * 100));
+        bar.style.width = pct + '%';
+      }
+    });
+
+    function handleScrubberSeek(e) {
+      const rect = track.getBoundingClientRect();
+      const clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const ratio = rect.width > 0 ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0;
+      const targetTime = ratio * (video.duration || 0);
+      bar.style.width = (ratio * 100) + '%';
+      timeTooltip.style.left = (ratio * 100) + '%';
+      timeTooltip.textContent = `${fmtDuration(targetTime)} / ${fmtDuration(video.duration || 0)}`;
+      return targetTime;
+    }
+
+    function onScrubberDown(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      if (!video.duration || !isFinite(video.duration)) return;
+      isDragging = true;
+      scrubber.classList.add('dragging');
+      wasPlaying = !video.paused;
+      if (wasPlaying) video.pause();
+      handleScrubberSeek(e);
+
+      function onScrubberMove(ev) {
+        ev.preventDefault();
+        handleScrubberSeek(ev);
+      }
+      function onScrubberUp(ev) {
+        document.removeEventListener('mousemove', onScrubberMove);
+        document.removeEventListener('mouseup', onScrubberUp);
+        document.removeEventListener('touchmove', onScrubberMove);
+        document.removeEventListener('touchend', onScrubberUp);
+        isDragging = false;
+        scrubber.classList.remove('dragging');
+        const finalTime = handleScrubberSeek(ev);
+        if (isFinite(finalTime)) video.currentTime = finalTime;
+        if (wasPlaying) video.play().catch(() => {});
+      }
+
+      document.addEventListener('mousemove', onScrubberMove);
+      document.addEventListener('mouseup', onScrubberUp);
+      document.addEventListener('touchmove', onScrubberMove, { passive: false });
+      document.addEventListener('touchend', onScrubberUp);
+    }
+
+    scrubber.addEventListener('mousedown', onScrubberDown);
+    scrubber.addEventListener('touchstart', onScrubberDown, { passive: false });
+    scrubber.addEventListener('click', (e) => e.stopPropagation());
+
     slide.appendChild(video);
     slide.appendChild(gradient);
     slide.appendChild(info);
     slide.appendChild(pauseIcon);
+    slide.appendChild(scrubber);
 
     slide.addEventListener('click', () => {
       if (!video.src) return;
@@ -1977,22 +2480,133 @@
   }
 
   modalClose.addEventListener('click', closeModal);
+  modalFullscreenBtn.addEventListener('click', () => toggleFullscreen(modal));
+  feedFullscreenBtn.addEventListener('click', () => toggleFullscreen(feedEl));
   navPrev.addEventListener('click', () => navigate(-1));
   navNext.addEventListener('click', () => navigate(1));
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = !!document.fullscreenElement;
+    if (modalFullscreenBtn) {
+      modalFullscreenBtn.textContent = isFs ? '🗗 退出' : '⛶ 全屏';
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (feedEl.classList.contains('show')) {
-      if (e.key === 'Escape') closeFeed();
-      else if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); feedNavigate(1); }
-      else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); feedNavigate(-1); }
-      else if (e.key === ' ') { e.preventDefault(); feedEl.children[feedIndex]?.click(); }
+    // 忽略表单输入焦点中的快捷键
+    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
       return;
     }
-    if (!modal.classList.contains('show')) return;
-    if (e.key === 'Escape') closeModal();
-    else if (e.key === 'ArrowLeft') navigate(-1);
-    else if (e.key === 'ArrowRight') navigate(1);
+
+    // 非原生拦截弹窗打开时
+    if (npModal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeNonPlayableDialog();
+      }
+      return;
+    }
+
+    // Feed 模式下的快捷键
+    if (feedEl.classList.contains('show')) {
+      const curSlide = feedEl.children[feedIndex];
+      const curVideo = curSlide ? curSlide._video : null;
+
+      if (e.key === 'Escape') {
+        closeFeed();
+      } else if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        feedNavigate(1);
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        feedNavigate(-1);
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        curSlide?.click();
+      } else if (e.key === '[' || e.key === '【') {
+        e.preventDefault();
+        if (curVideo) {
+          const spd = stepPlaybackSpeed(curVideo, -1);
+          showFeedHud(`⚡ ${spd}x`);
+        }
+      } else if (e.key === ']' || e.key === '】') {
+        e.preventDefault();
+        if (curVideo) {
+          const spd = stepPlaybackSpeed(curVideo, 1);
+          showFeedHud(`⚡ ${spd}x`);
+        }
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen(feedEl);
+      }
+      return;
+    }
+
+    // Modal 弹窗模式下的快捷键
+    if (modal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        if (modalVideo.paused) {
+          modalVideo.play().catch(() => {});
+          showModalHud('▶ 播放');
+        } else {
+          modalVideo.pause();
+          showModalHud('⏸ 暂停');
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 5;
+        modalVideo.currentTime = Math.max(0, modalVideo.currentTime - step);
+        showModalHud(`⏪ -${step}s (${fmtDuration(modalVideo.currentTime)})`);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 5;
+        const dur = modalVideo.duration || (modalVideo.currentTime + step);
+        modalVideo.currentTime = Math.min(dur, modalVideo.currentTime + step);
+        showModalHud(`⏩ +${step}s (${fmtDuration(modalVideo.currentTime)})`);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const curVol = modalVideo.muted ? 0 : modalVideo.volume;
+        const nextVol = Math.round(Math.min(1, curVol + 0.05) * 100) / 100;
+        modalVideo.volume = nextVol;
+        modalVideo.muted = false;
+        showModalHud(`🔊 ${Math.round(nextVol * 100)}%`);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const curVol = modalVideo.muted ? 0 : modalVideo.volume;
+        const nextVol = Math.round(Math.max(0, curVol - 0.05) * 100) / 100;
+        modalVideo.volume = nextVol;
+        showModalHud(nextVol === 0 ? '🔇 静音' : `🔉 ${Math.round(nextVol * 100)}%`);
+      } else if (e.key === '[' || e.key === '【') {
+        e.preventDefault();
+        const spd = stepPlaybackSpeed(modalVideo, -1);
+        showModalHud(`⚡ ${spd}x`);
+      } else if (e.key === ']' || e.key === '】') {
+        e.preventDefault();
+        const spd = stepPlaybackSpeed(modalVideo, 1);
+        showModalHud(`⚡ ${spd}x`);
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen(modal);
+      } else if (e.key === 'PageUp' || e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === 'PageDown' || e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        navigate(1);
+      }
+      return;
+    }
+
+    // 全局主界面快捷键
+    if ((e.key === 'r' || e.key === 'R') && activeFolderId) {
+      e.preventDefault();
+      rescanActiveFolder();
+    }
   });
 
   // ---------- 检索与排序事件 ----------

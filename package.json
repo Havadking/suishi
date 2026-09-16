@@ -4,8 +4,9 @@
   "private": true,
   "description": "随拾 · 本地短视频抽屉",
   "scripts": {
-    "dev": "npx serve -l 3000 .",
-    "start": "npx serve -l 3000 ."
+    "dev": "npx serve -l 8964 .",
+    "start": "npx serve -l 8964 .",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "serve": "^14.2.6"
