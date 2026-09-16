@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地视频浏览器</title>
+<style>
+  :root {
+    /* palette sourced from Chinese traditional colors (荼白 / 靛青 / 苍色 family) */
+    --bg: #F3F9F1;
+    --bg-elevated: #FFFFFF;
+    --border: #DCE3D8;
+    --text: #3D3B4F;
+    --text-dim: #75878A;
+    --accent: #177CB0;
+    --accent-hover: #2E4E7E;
+    --accent-dim: #D2F0F4;
+    --card-bg: #FFFFFF;
+    --danger: #F20C00;
+    --shadow: 0 1px 3px rgba(61,59,79,.06), 0 1px 2px rgba(61,59,79,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    height: 100%;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 12px 0 0;
+    white-space: nowrap;
+  }
+  button, select, input[type="text"] {
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 12px;
+    outline: none;
+  }
+  button {
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  select { cursor: pointer; }
+  input[type="text"] {
+    min-width: 200px;
+    flex: 1;
+  }
+  input[type="text"]::placeholder { color: var(--text-dim); }
+  .spacer { flex: 1; }
+  .stats {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  label.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  #status-bar {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    display: none;
+  }
+  #status-bar.show { display: block; }
+
+  #empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px;
+    color: var(--text-dim);
+    text-align: center;
+    gap: 14px;
+  }
+  #empty-state svg { opacity: .35; }
+  #empty-state .hint { font-size: 13px; max-width: 420px; line-height: 1.6; }
+
+  #folder-bar {
+    display: none;
+    gap: 8px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+  }
+  #folder-bar.show { display: flex; }
+  #folder-bar::-webkit-scrollbar { height: 6px; }
+  .folder-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .folder-pill:hover { border-color: var(--accent); color: var(--text); }
+  .folder-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .folder-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.7);
+  }
+  .folder-pill .count {
+    font-size: 11px;
+    opacity: .75;
+  }
+
+  #grid { padding: 16px; }
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 4px 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .group-header:first-child { padding-top: 0; }
+  .group-header .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .group-header .group-name { flex: 1; }
+  .group-count {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform .12s, border-color .12s, box-shadow .12s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 16px rgba(23,124,176,.14);
+  }
+  .thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #0e1013;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb-wrap .placeholder {
+    color: var(--text-dim);
+    opacity: .5;
+  }
+  .duration-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(0,0,0,.75);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ext-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0,0,0,.6);
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .card-body {
+    padding: 8px 10px;
+  }
+  .card-name {
+    font-size: 12.5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .card-path {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+  }
+
+  .card-feed-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    z-index: 2;
+  }
+  .card:hover .card-feed-btn { display: flex; }
+  .card-feed-btn:hover { background: var(--accent); }
+
+  /* Feed (swipe-browse) mode */
+  #feed {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: #000;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    overscroll-behavior: contain;
+  }
+  #feed.show { display: block; }
+  #feed::-webkit-scrollbar { display: none; }
+
+  .feed-slide {
+    position: relative;
+    height: 100dvh;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+  }
+  .feed-slide video {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    background: #000;
+    object-fit: contain;
+  }
+  .feed-slide .feed-gradient {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 140px;
+    background: linear-gradient(to top, rgba(0,0,0,.75), transparent);
+    pointer-events: none;
+  }
+  .feed-slide .feed-info {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 18px;
+    color: #fff;
+    font-size: 13px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    pointer-events: none;
+  }
+  .feed-slide .feed-info .fname {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .feed-slide .feed-info .fpath {
+    opacity: .7;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .feed-slide .pause-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    transition: opacity .15s;
+  }
+  .feed-slide.paused .pause-icon { opacity: .9; }
+
+  .feed-hud {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 210;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .feed-hud button {
+    background: rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .feed-hud button:hover { background: rgba(255,255,255,.2); }
+  .feed-counter {
+    background: rgba(0,0,0,.45);
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Player modal */
+  #modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.9);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #modal.show { display: flex; }
+  #modal video {
+    max-width: 92vw;
+    max-height: 78vh;
+    background: #000;
+    border-radius: 4px;
+  }
+  #modal .modal-info {
+    color: var(--text);
+    font-size: 13px;
+    margin-top: 12px;
+    max-width: 80vw;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  #modal .modal-controls {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+  }
+  #modal .nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,.08);
+    border: none;
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  #modal .nav-btn:hover { background: rgba(255,255,255,.18); }
+  #modal .nav-prev { left: 20px; }
+  #modal .nav-next { right: 20px; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📁 本地视频浏览器</h1>
+  <button id="btn-pick" class="primary">选择文件夹</button>
+  <input id="search" type="text" placeholder="搜索文件名…" disabled>
+  <select id="sort-key" disabled>
+    <option value="name">按文件名</option>
+    <option value="date">按修改时间</option>
+    <option value="size">按大小</option>
+  </select>
+  <button id="sort-dir" disabled title="切换升序/降序">↓</button>
+  <label class="checkbox">
+    <input type="checkbox" id="recursive" checked disabled>
+    包含子文件夹
+  </label>
+  <button id="btn-feed" disabled title="沉浸式竖屏刷视频">🔀 刷视频</button>
+  <label class="checkbox">
+    <input type="checkbox" id="feed-shuffle" disabled>
+    随机顺序
+  </label>
+  <div class="spacer"></div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div id="folder-bar"></div>
+
+<div id="status-bar"></div>
+
+<div id="empty-state">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+    <path d="M4 4h16v16H4z" stroke-opacity=".4"/>
+    <path d="M10 9l5 3-5 3z"/>
+  </svg>
+  <div>点击「选择文件夹」来浏览本地视频</div>
+  <div class="hint">
+    使用浏览器的文件系统权限直接读取本地文件，不会上传任何数据。
+    仅支持 Chrome / Edge 等基于 Chromium 的浏览器。<br>
+    授权一次后，下次打开本页面会自动记住文件夹（可能需要再次确认权限）。
+  </div>
+</div>
+
+<div id="grid"></div>
+
+<div id="modal">
+  <div class="modal-controls">
+    <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
+  </div>
+  <button class="nav-btn nav-prev" id="nav-prev">‹</button>
+  <video id="modal-video" controls autoplay></video>
+  <button class="nav-btn nav-next" id="nav-next">›</button>
+  <div class="modal-info" id="modal-info"></div>
+</div>
+
+<div class="feed-hud" id="feed-hud">
+  <button id="feed-close" title="关闭 (Esc)">✕</button>
+  <div class="feed-counter" id="feed-counter"></div>
+  <button id="feed-mute" title="静音/取消静音">🔇</button>
+</div>
+<div id="feed"></div>
+
+<script>
+(() => {
+  const VIDEO_EXT = ['mp4','webm','ogg','ogv','mov','m4v','mkv','avi','wmv','flv','ts'];
+  const NATIVE_PLAYABLE = ['mp4','webm','ogg','ogv','m4v','mov'];
+
+  const $ = (id) => document.getElementById(id);
+  const btnPick = $('btn-pick');
+  const searchInput = $('search');
+  const sortKeySel = $('sort-key');
+  const sortDirBtn = $('sort-dir');
+  const recursiveChk = $('recursive');
+  const statsEl = $('stats');
+  const statusBar = $('status-bar');
+  const emptyState = $('empty-state');
+  const gridEl = $('grid');
+  const modal = $('modal');
+  const modalVideo = $('modal-video');
+  const modalInfo = $('modal-info');
+  const modalClose = $('modal-close');
+  const navPrev = $('nav-prev');
+  const navNext = $('nav-next');
+  const btnFeed = $('btn-feed');
+  const feedShuffleChk = $('feed-shuffle');
+  const feedEl = $('feed');
+  const feedHud = $('feed-hud');
+  const feedCounter = $('feed-counter');
+  const feedMuteBtn = $('feed-mute');
+  const feedCloseBtn = $('feed-close');
+  const folderBarEl = $('folder-bar');
+
+  const ROOT_GROUP = '（根目录）';
+  const CATEGORY_COLORS = ['#177CB0','#48C0A3','#DB5A6B','#FFA631','#8D4BBB','#21A675','#4B5CC4','#F2BE45','#F47983','#30DFF3'];
+  function colorForFolder(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
+  }
+
+  let allVideos = [];      // {handle, name, path, ext, size, mtime}
+  let filtered = [];       // currently displayed, in order
+  let currentModalIndex = -1;
+  let sortDir = -1;        // -1 desc (default: name asc actually), see below
+  let rootHandle = null;
+  let currentObjectUrl = null;
+  let io = null;
+  let activeFolder = null; // null = show all folders grouped; string = filter to one top-level folder
+  let hasFolderGroups = false;
+
+  let feedList = [];
+  let feedIndex = 0;
+  let feedMuted = localStorage.getItem('feedMuted') !== 'false'; // default muted
+  let feedActiveObs = null;
+  let feedPosterObs = null;
+  let feedLoaded = new Set(); // slide indices with real video src loaded
+
+  // ---------- IndexedDB persistence for the directory handle ----------
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('local-video-browser', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('kv');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, val) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(val, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('kv', 'readonly');
+      const req = tx.objectStore('kv').get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // ---------- helpers ----------
+  function isVideoFile(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    return VIDEO_EXT.includes(ext);
+  }
+  function extOf(name) {
+    return name.split('.').pop().toLowerCase();
+  }
+  function fmtSize(bytes) {
+    if (bytes == null) return '';
+    const units = ['B','KB','MB','GB'];
+    let i = 0, v = bytes;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+  function fmtDuration(sec) {
+    if (!isFinite(sec) || sec < 0) return '';
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const mm = String(m).padStart(h ? 2 : 1, '0');
+    const ss = String(s).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2,'0')}:${ss}` : `${mm}:${ss}`;
+  }
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function setStatus(msg) {
+    statusBar.textContent = msg;
+    statusBar.classList.toggle('show', !!msg);
+  }
+  function topFolderOf(v) {
+    return (v.path ? v.path.split('/')[0] : '') || ROOT_GROUP;
+  }
+  function setControlsEnabled(enabled) {
+    searchInput.disabled = !enabled;
+    sortKeySel.disabled = !enabled;
+    sortDirBtn.disabled = !enabled;
+    recursiveChk.disabled = !enabled;
+    btnFeed.disabled = !enabled;
+    feedShuffleChk.disabled = !enabled;
+  }
+
+  // ---------- folder scanning ----------
+  async function* walk(dirHandle, path, recursive) {
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file') {
+        if (isVideoFile(entry.name)) yield { handle: entry, path };
+      } else if (entry.kind === 'directory' && recursive) {
+        yield* walk(entry, path ? `${path}/${entry.name}` : entry.name, recursive);
+      }
+    }
+  }
+
+  async function loadFolder(handle) {
+    rootHandle = handle;
+    allVideos = [];
+    gridEl.innerHTML = '';
+    emptyState.style.display = 'none';
+    setStatus('正在扫描文件夹…');
+    setControlsEnabled(false);
+
+    const recursive = recursiveChk.checked;
+    let count = 0;
+    for await (const { handle: fh, path } of walk(handle, '', recursive)) {
+      let file;
+      try { file = await fh.getFile(); } catch { continue; }
+      allVideos.push({
+        handle: fh,
+        name: fh.name,
+        path,
+        ext: extOf(fh.name),
+        size: file.size,
+        mtime: file.lastModified,
+      });
+      count++;
+      if (count % 25 === 0) setStatus(`正在扫描文件夹… 已找到 ${count} 个视频`);
+    }
+    setStatus('');
+    setControlsEnabled(true);
+    emptyState.style.display = allVideos.length ? 'none' : 'flex';
+    if (!allVideos.length) {
+      emptyState.querySelector('div:nth-child(2)') && (emptyState.querySelector('div:last-child').textContent = '该文件夹（含子文件夹）中没有找到视频文件');
+    }
+
+    const topKeys = new Set(allVideos.map(topFolderOf));
+    hasFolderGroups = topKeys.size > 1;
+    activeFolder = null;
+
+    render();
+  }
+
+  // ---------- filter + sort + group + render ----------
+  function sortGroup(items) {
+    const key = sortKeySel.value;
+    items.sort((a, b) => {
+      let r;
+      if (key === 'name') r = a.name.localeCompare(b.name, 'zh');
+      else if (key === 'date') r = a.mtime - b.mtime;
+      else r = a.size - b.size;
+      return r * sortDir;
+    });
+    return items;
+  }
+
+  function renderFolderBar() {
+    folderBarEl.innerHTML = '';
+    folderBarEl.classList.toggle('show', hasFolderGroups);
+    if (!hasFolderGroups) return;
+
+    const counts = new Map();
+    for (const v of allVideos) {
+      const key = topFolderOf(v);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const keys = Array.from(counts.keys()).sort((a, b) => {
+      if (a === ROOT_GROUP) return 1;
+      if (b === ROOT_GROUP) return -1;
+      return a.localeCompare(b, 'zh');
+    });
+
+    const makePill = (label, count, key) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'folder-pill' + (activeFolder === key ? ' active' : '');
+      if (key) {
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = colorForFolder(key);
+        pill.appendChild(dot);
+      }
+      const name = document.createElement('span');
+      name.textContent = label;
+      name.title = label;
+      const countEl = document.createElement('span');
+      countEl.className = 'count';
+      countEl.textContent = count;
+      pill.appendChild(name);
+      pill.appendChild(countEl);
+      pill.addEventListener('click', () => { activeFolder = key; render(); });
+      return pill;
+    };
+
+    folderBarEl.appendChild(makePill('全部', allVideos.length, null));
+    keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k), k)));
+  }
+
+  function render() {
+    if (io) { io.disconnect(); }
+    io = new IntersectionObserver(onIntersect, { rootMargin: '400px' });
+
+    renderFolderBar();
+
+    const q = searchInput.value.trim().toLowerCase();
+    let base = allVideos.filter(v => !q || v.name.toLowerCase().includes(q) || v.path.toLowerCase().includes(q));
+    if (activeFolder) base = base.filter(v => topFolderOf(v) === activeFolder);
+
+    let groups;
+    if (!hasFolderGroups || activeFolder) {
+      groups = [{ name: activeFolder, items: sortGroup(base) }];
+    } else {
+      const map = new Map();
+      for (const v of base) {
+        const key = topFolderOf(v);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(v);
+      }
+      const keys = Array.from(map.keys()).sort((a, b) => {
+        if (a === ROOT_GROUP) return 1;
+        if (b === ROOT_GROUP) return -1;
+        return a.localeCompare(b, 'zh');
+      });
+      groups = keys.map(k => ({ name: k, items: sortGroup(map.get(k)) }));
+    }
+
+    filtered = [];
+    groups.forEach(g => filtered.push(...g.items));
+
+    statsEl.textContent = allVideos.length
+      ? `${filtered.length} / ${allVideos.length} 个视频 · 共 ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
+      : '';
+
+    gridEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    let idx = 0;
+    groups.forEach(g => {
+      if (!g.items.length) return;
+      if (hasFolderGroups) {
+        const header = document.createElement('div');
+        header.className = 'group-header';
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = colorForFolder(g.name);
+        const name = document.createElement('span');
+        name.className = 'group-name';
+        name.textContent = g.name;
+        const count = document.createElement('span');
+        count.className = 'group-count';
+        count.textContent = `${g.items.length} 个视频`;
+        header.appendChild(dot);
+        header.appendChild(name);
+        header.appendChild(count);
+        frag.appendChild(header);
+      }
+      const sectionGrid = document.createElement('div');
+      sectionGrid.className = 'section-grid';
+      g.items.forEach(v => {
+        sectionGrid.appendChild(buildCard(v, idx));
+        idx++;
+      });
+      frag.appendChild(sectionGrid);
+    });
+    gridEl.appendChild(frag);
+  }
+
+  function buildCard(v, idx) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.idx = idx;
+
+    const thumbWrap = document.createElement('div');
+    thumbWrap.className = 'thumb-wrap';
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 4h16v16H4z" stroke-opacity=".4"/><path d="M10 9l5 3-5 3z"/></svg>`;
+    thumbWrap.appendChild(placeholder);
+
+    const extBadge = document.createElement('div');
+    extBadge.className = 'ext-badge';
+    extBadge.textContent = v.ext;
+    thumbWrap.appendChild(extBadge);
+
+    const durBadge = document.createElement('div');
+    durBadge.className = 'duration-badge';
+    durBadge.style.display = 'none';
+    thumbWrap.appendChild(durBadge);
+
+    const feedBtn = document.createElement('button');
+    feedBtn.type = 'button';
+    feedBtn.className = 'card-feed-btn';
+    feedBtn.title = '从这里进入刷视频模式';
+    feedBtn.textContent = '▶';
+    feedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFeed(idx);
+    });
+    thumbWrap.appendChild(feedBtn);
+
+    card.appendChild(thumbWrap);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'card-name';
+    nameEl.textContent = v.name;
+    nameEl.title = v.name;
+    body.appendChild(nameEl);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'card-meta';
+    const pathEl = document.createElement('span');
+    pathEl.className = 'card-path';
+    pathEl.textContent = v.path || '.';
+    pathEl.title = v.path || '.';
+    const sizeEl = document.createElement('span');
+    sizeEl.textContent = fmtSize(v.size);
+    metaEl.appendChild(pathEl);
+    metaEl.appendChild(sizeEl);
+    body.appendChild(metaEl);
+
+    card.appendChild(body);
+
+    card._thumbWrap = thumbWrap;
+    card._placeholder = placeholder;
+    card._durBadge = durBadge;
+    card._video = v;
+
+    card.addEventListener('click', () => openModal(idx));
+    io.observe(card);
+
+    return card;
+  }
+
+  function onIntersect(entries) {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        io.unobserve(entry.target);
+        generateThumbnail(entry.target);
+      }
+    }
+  }
+
+  // Generates (and caches on the video item) a small thumbnail data URL + duration.
+  // Shared by the grid cards and the feed slides so a video is only decoded once.
+  function ensureThumbnail(v) {
+    if (v._thumbPromise) return v._thumbPromise;
+    v._thumbPromise = (async () => {
+      if (!NATIVE_PLAYABLE.includes(v.ext)) return null;
+      let file, url;
+      try {
+        file = await v.handle.getFile();
+        url = URL.createObjectURL(file);
+      } catch { return null; }
+
+      return await new Promise((resolve) => {
+        const vid = document.createElement('video');
+        vid.muted = true;
+        vid.preload = 'metadata';
+        vid.src = url;
+        const cleanup = () => URL.revokeObjectURL(url);
+
+        vid.addEventListener('loadedmetadata', () => {
+          if (isFinite(vid.duration)) v._duration = vid.duration;
+          const seekTo = Math.min((vid.duration || 0) * 0.15, 3);
+          try { vid.currentTime = seekTo; } catch { drawFrame(); }
+        }, { once: true });
+        vid.addEventListener('seeked', drawFrame, { once: true });
+        vid.addEventListener('error', () => { cleanup(); resolve(null); }, { once: true });
+
+        function drawFrame() {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
+            const vw = vid.videoWidth, vh = vid.videoHeight;
+            if (vw && vh) {
+              const scale = Math.max(320 / vw, 180 / vh);
+              const dw = vw * scale, dh = vh * scale;
+              ctx.drawImage(vid, (320 - dw) / 2, (180 - dh) / 2, dw, dh);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+              cleanup();
+              resolve(dataUrl);
+              return;
+            }
+          } catch {}
+          cleanup();
+          resolve(null);
+        }
+      });
+    })();
+    return v._thumbPromise;
+  }
+
+  async function generateThumbnail(card) {
+    const v = card._video;
+    const dataUrl = await ensureThumbnail(v);
+    if (v._duration) {
+      card._durBadge.textContent = fmtDuration(v._duration);
+      card._durBadge.style.display = '';
+    }
+    if (dataUrl && card._placeholder) {
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      card._thumbWrap.replaceChild(img, card._placeholder);
+      card._placeholder = null;
+    }
+  }
+
+  // ---------- feed (swipe-browse) mode ----------
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildFeedSlide(v, idx) {
+    const slide = document.createElement('div');
+    slide.className = 'feed-slide';
+    slide.dataset.idx = idx;
+
+    const video = document.createElement('video');
+    video.loop = true;
+    video.playsInline = true;
+    video.muted = feedMuted;
+    video.preload = 'none';
+
+    const gradient = document.createElement('div');
+    gradient.className = 'feed-gradient';
+
+    const info = document.createElement('div');
+    info.className = 'feed-info';
+    const fname = document.createElement('div');
+    fname.className = 'fname';
+    fname.textContent = v.name;
+    fname.title = v.name;
+    const fpath = document.createElement('div');
+    fpath.className = 'fpath';
+    fpath.textContent = `${v.path ? v.path + '/' : ''}${fmtSize(v.size)}`;
+    info.appendChild(fname);
+    info.appendChild(fpath);
+
+    const pauseIcon = document.createElement('div');
+    pauseIcon.className = 'pause-icon';
+    pauseIcon.textContent = '►';
+
+    slide.appendChild(video);
+    slide.appendChild(gradient);
+    slide.appendChild(info);
+    slide.appendChild(pauseIcon);
+
+    slide.addEventListener('click', () => {
+      if (!video.src) return;
+      if (video.paused) { video.play().catch(() => {}); slide.classList.remove('paused'); }
+      else { video.pause(); slide.classList.add('paused'); }
+    });
+
+    slide._video = video;
+    slide._srcVideo = v;
+    return slide;
+  }
+
+  async function loadFeedSlidePoster(slide) {
+    if (slide._posterLoaded) return;
+    slide._posterLoaded = true;
+    const dataUrl = await ensureThumbnail(slide._srcVideo);
+    if (dataUrl) slide._video.poster = dataUrl;
+  }
+
+  async function loadFeedSlideSrc(slide) {
+    const idx = Number(slide.dataset.idx);
+    if (feedLoaded.has(idx)) return;
+    let file;
+    try { file = await slide._srcVideo.handle.getFile(); } catch { return; }
+    const url = URL.createObjectURL(file);
+    slide._objectUrl = url;
+    slide._video.src = url;
+    slide._video.preload = 'auto';
+    feedLoaded.add(idx);
+  }
+
+  function unloadFeedSlideSrc(slide) {
+    const idx = Number(slide.dataset.idx);
+    if (!feedLoaded.has(idx)) return;
+    slide._video.pause();
+    slide._video.removeAttribute('src');
+    slide._video.load();
+    if (slide._objectUrl) { URL.revokeObjectURL(slide._objectUrl); slide._objectUrl = null; }
+    feedLoaded.delete(idx);
+    slide.classList.remove('paused');
+  }
+
+  function activateFeedIndex(idx) {
+    feedIndex = idx;
+    feedCounter.textContent = `${idx + 1} / ${feedList.length}`;
+    const slides = feedEl.children;
+    for (let i = 0; i < slides.length; i++) {
+      const slide = slides[i];
+      if (Math.abs(i - idx) <= 1) {
+        loadFeedSlideSrc(slide).then(() => {
+          if (i === feedIndex && feedEl.classList.contains('show')) {
+            slide._video.muted = feedMuted;
+            slide._video.play().catch(() => {});
+          }
+        });
+      } else {
+        unloadFeedSlideSrc(slide);
+      }
+      if (i !== idx && slide._video.src) {
+        slide._video.pause();
+        slide.classList.remove('paused');
+      }
+    }
+  }
+
+  function openFeed(startIdx, opts = {}) {
+    if (!filtered.length) return;
+    feedList = opts.shuffle ? shuffleArray(filtered) : filtered.slice();
+    feedIndex = opts.shuffle ? 0 : startIdx;
+    feedLoaded.clear();
+    feedEl.innerHTML = '';
+
+    const frag = document.createDocumentFragment();
+    feedList.forEach((v, i) => frag.appendChild(buildFeedSlide(v, i)));
+    feedEl.appendChild(frag);
+
+    feedPosterObs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) loadFeedSlidePoster(e.target); });
+    }, { root: feedEl, rootMargin: '150% 0px', threshold: 0 });
+
+    feedActiveObs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && e.intersectionRatio >= 0.6) {
+          activateFeedIndex(Number(e.target.dataset.idx));
+        }
+      });
+    }, { root: feedEl, threshold: [0.6] });
+
+    Array.from(feedEl.children).forEach((slide) => {
+      feedPosterObs.observe(slide);
+      feedActiveObs.observe(slide);
+    });
+
+    feedEl.classList.add('show');
+    feedHud.style.display = 'flex';
+    feedMuteBtn.textContent = feedMuted ? '🔇' : '🔊';
+    document.body.style.overflow = 'hidden';
+
+    feedEl.children[feedIndex].scrollIntoView({ block: 'start', behavior: 'auto' });
+    activateFeedIndex(feedIndex);
+  }
+
+  function closeFeed() {
+    feedEl.classList.remove('show');
+    feedHud.style.display = 'none';
+    document.body.style.overflow = '';
+    if (feedActiveObs) { feedActiveObs.disconnect(); feedActiveObs = null; }
+    if (feedPosterObs) { feedPosterObs.disconnect(); feedPosterObs = null; }
+    Array.from(feedEl.children).forEach(unloadFeedSlideSrc);
+    feedEl.innerHTML = '';
+    feedList = [];
+  }
+
+  function feedNavigate(delta) {
+    const next = feedIndex + delta;
+    if (next < 0 || next >= feedList.length) return;
+    feedEl.children[next].scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  btnFeed.addEventListener('click', () => openFeed(0, { shuffle: feedShuffleChk.checked }));
+  feedCloseBtn.addEventListener('click', closeFeed);
+  feedMuteBtn.addEventListener('click', () => {
+    feedMuted = !feedMuted;
+    localStorage.setItem('feedMuted', String(feedMuted));
+    feedMuteBtn.textContent = feedMuted ? '🔇' : '🔊';
+    const cur = feedEl.children[feedIndex];
+    if (cur) cur._video.muted = feedMuted;
+  });
+
+  // ---------- modal player ----------
+  async function openModal(idx) {
+    currentModalIndex = idx;
+    const v = filtered[idx];
+    if (!v) return;
+    let file;
+    try { file = await v.handle.getFile(); }
+    catch { alert('无法读取该文件，可能已被移动或删除。'); return; }
+
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(file);
+    modalVideo.src = currentObjectUrl;
+    modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
+    modal.classList.add('show');
+    navPrev.style.visibility = idx > 0 ? 'visible' : 'hidden';
+    navNext.style.visibility = idx < filtered.length - 1 ? 'visible' : 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('show');
+    modalVideo.pause();
+    modalVideo.removeAttribute('src');
+    modalVideo.load();
+    if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    currentModalIndex = -1;
+  }
+
+  function navigate(delta) {
+    const next = currentModalIndex + delta;
+    if (next >= 0 && next < filtered.length) openModal(next);
+  }
+
+  modalClose.addEventListener('click', closeModal);
+  navPrev.addEventListener('click', () => navigate(-1));
+  navNext.addEventListener('click', () => navigate(1));
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (feedEl.classList.contains('show')) {
+      if (e.key === 'Escape') closeFeed();
+      else if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); feedNavigate(1); }
+      else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); feedNavigate(-1); }
+      else if (e.key === ' ') { e.preventDefault(); feedEl.children[feedIndex]?.click(); }
+      return;
+    }
+    if (!modal.classList.contains('show')) return;
+    if (e.key === 'Escape') closeModal();
+    else if (e.key === 'ArrowLeft') navigate(-1);
+    else if (e.key === 'ArrowRight') navigate(1);
+  });
+
+  // ---------- controls ----------
+  searchInput.addEventListener('input', debounce(render, 150));
+  sortKeySel.addEventListener('change', render);
+  sortDirBtn.addEventListener('click', () => {
+    sortDir *= -1;
+    sortDirBtn.textContent = sortDir === 1 ? '↑' : '↓';
+    render();
+  });
+  recursiveChk.addEventListener('change', () => { if (rootHandle) loadFolder(rootHandle); });
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  // ---------- folder picking ----------
+  async function pickFolder() {
+    if (!window.showDirectoryPicker) {
+      alert('当前浏览器不支持 File System Access API，请使用 Chrome 或 Edge 打开本页面。');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      await idbSet('dirHandle', handle);
+      await loadFolder(handle);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error(err);
+    }
+  }
+  btnPick.addEventListener('click', pickFolder);
+
+  // ---------- restore previous folder on load ----------
+  async function tryRestore() {
+    if (!window.showDirectoryPicker) return;
+    let handle;
+    try { handle = await idbGet('dirHandle'); } catch { return; }
+    if (!handle) return;
+
+    try {
+      const perm = await handle.queryPermission({ mode: 'read' });
+      if (perm === 'granted') {
+        await loadFolder(handle);
+      } else {
+        emptyState.innerHTML = `
+          <div>上次浏览过：<b>${handle.name}</b></div>
+          <div class="hint">需要重新确认文件夹读取权限</div>
+          <button class="primary" id="btn-reauth" style="margin-top:8px;">重新授权并打开</button>`;
+        $('btn-reauth').addEventListener('click', async () => {
+          const p = await handle.requestPermission({ mode: 'read' });
+          if (p === 'granted') loadFolder(handle);
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  tryRestore();
+})();
+</script>
+</body>
+</html>
