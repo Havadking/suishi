@@ -523,6 +523,12 @@
     font-weight: 500;
     box-shadow: 0 2px 6px rgba(224, 122, 95, 0.25);
   }
+  .folder-pill.fav-pill.active {
+    background: #E8A838;
+    border-color: #E8A838;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(232, 168, 56, 0.35);
+  }
   .folder-pill .dot {
     width: 8px;
     height: 8px;
@@ -713,6 +719,61 @@
     transform: scale(1.1);
   }
 
+  .card-fav-btn {
+    position: absolute;
+    top: 7px;
+    right: 42px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(28, 23, 20, 0.75);
+    backdrop-filter: blur(4px);
+    color: rgba(255, 255, 255, 0.85);
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 3;
+    transition: background 0.15s, transform 0.15s, color 0.15s;
+  }
+  .card:hover .card-fav-btn,
+  .card-fav-btn.is-active {
+    display: flex;
+  }
+  .card-fav-btn.is-active {
+    color: #F2C94C;
+    background: rgba(28, 23, 20, 0.85);
+  }
+  .card-fav-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: scale(1.1);
+  }
+  .card.is-non-playable .card-fav-btn {
+    right: 7px;
+  }
+
+  .card-del-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    opacity: 0.45;
+    margin-left: auto;
+    transition: opacity 0.15s, background 0.15s;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .card-del-btn:hover {
+    opacity: 1;
+    background: var(--danger-subtle);
+  }
+
   .card-body {
     padding: 9px 12px 11px;
   }
@@ -730,6 +791,7 @@
     color: var(--text-muted);
     margin-top: 4px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
@@ -922,6 +984,11 @@
     background: rgba(224, 122, 95, 0.85);
     transform: scale(1.05);
   }
+  .feed-hud button.is-active {
+    color: #F2C94C;
+    border-color: #F2C94C;
+    background: rgba(30, 25, 20, 0.75);
+  }
   .feed-counter {
     background: rgba(30, 25, 20, 0.55);
     backdrop-filter: blur(8px);
@@ -971,7 +1038,7 @@
     gap: 10px;
     z-index: 105;
   }
-  #modal-close, #modal-fullscreen {
+  #modal .modal-controls button {
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.25);
     color: #fff;
@@ -979,12 +1046,21 @@
     border-radius: var(--radius-full);
     cursor: pointer;
     font-size: 13px;
-    transition: background 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     display: inline-flex;
     align-items: center;
     gap: 6px;
   }
-  #modal-close:hover, #modal-fullscreen:hover { background: rgba(255,255,255,0.28); }
+  #modal .modal-controls button:hover { background: rgba(255,255,255,0.28); }
+  #modal .modal-controls button.is-active {
+    background: rgba(242, 201, 76, 0.25);
+    border-color: #F2C94C;
+    color: #F2C94C;
+  }
+  #modal .modal-controls button.danger:hover {
+    background: rgba(229, 83, 83, 0.45);
+    border-color: var(--danger);
+  }
 
   #modal .nav-btn {
     position: absolute;
@@ -1276,6 +1352,8 @@
 <!-- 弹窗播放器 -->
 <div id="modal">
   <div class="modal-controls">
+    <button id="modal-fav" title="星标收藏 (S)">⭐ 收藏</button>
+    <button id="modal-delete" class="danger" title="删除当前视频 (Delete)">🗑️ 删除</button>
     <button id="modal-fullscreen" title="全屏 (F)">⛶ 全屏</button>
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
   </div>
@@ -1291,6 +1369,7 @@
   <button id="feed-close" title="关闭 (Esc)">✕</button>
   <div class="feed-counter" id="feed-counter"></div>
   <div style="display:flex;gap:8px;align-items:center;">
+    <button id="feed-fav" title="星标收藏 (S)">☆</button>
     <button id="feed-fullscreen" title="全屏 (F)">⛶</button>
     <button id="feed-mute" title="静音/取消静音">🔇</button>
   </div>
@@ -1355,6 +1434,9 @@
   const folderBarEl = $('folder-bar');
 
   const btnRefresh = $('btn-refresh');
+  const modalFavBtn = $('modal-fav');
+  const modalDeleteBtn = $('modal-delete');
+  const feedFavBtn = $('feed-fav');
   const modalFullscreenBtn = $('modal-fullscreen');
   const modalHud = $('modal-hud');
   const feedFullscreenBtn = $('feed-fullscreen');
@@ -1496,10 +1578,10 @@
   }
   let feedMuted = localStorage.getItem('feedMuted') !== 'false';
 
-  // ---------- IndexedDB 升级适配层 (含持久化缩略图池) ----------
+  // ---------- IndexedDB 升级适配层 (含持久化缩略图池与星标收藏) ----------
   function idbOpen() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('suishi-video-db', 3);
+      const req = indexedDB.open('suishi-video-db', 4);
       req.onupgradeneeded = (e) => {
         const db = req.result;
         if (!db.objectStoreNames.contains('kv')) {
@@ -1507,6 +1589,9 @@
         }
         if (!db.objectStoreNames.contains('thumbnails')) {
           db.createObjectStore('thumbnails');
+        }
+        if (!db.objectStoreNames.contains('favorites')) {
+          db.createObjectStore('favorites');
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -1575,6 +1660,118 @@
       });
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  // ---------- 星标收藏持久化系统 ----------
+  let favoriteSet = new Set();
+
+  function getFavoriteKey(folderId, v) {
+    if (!v) return '';
+    const relPath = (v.path ? v.path + '/' : '') + v.name;
+    return `${folderId || ''}:${relPath}`;
+  }
+
+  function isFavorited(v) {
+    return favoriteSet.has(getFavoriteKey(activeFolderId, v));
+  }
+
+  async function loadFavoritesForActiveFolder() {
+    favoriteSet.clear();
+    if (!activeFolderId) return;
+    try {
+      const db = await idbOpen();
+      return new Promise((resolve) => {
+        const tx = db.transaction('favorites', 'readonly');
+        const store = tx.objectStore('favorites');
+        const req = store.getAllKeys ? store.getAllKeys() : store.getAll();
+        req.onsuccess = () => {
+          const keys = req.result || [];
+          const prefix = `${activeFolderId}:`;
+          keys.forEach(k => {
+            const keyStr = typeof k === 'string' ? k : (k && k.key ? k.key : '');
+            if (keyStr.startsWith(prefix)) {
+              favoriteSet.add(keyStr);
+            }
+          });
+          resolve();
+        };
+        req.onerror = () => resolve();
+      });
+    } catch (e) {
+      console.error('加载收藏失败:', e);
+    }
+  }
+
+  async function toggleFavorite(v) {
+    if (!v || !activeFolderId) return;
+    const key = getFavoriteKey(activeFolderId, v);
+    const nowFav = !favoriteSet.has(key);
+    try {
+      const db = await idbOpen();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('favorites', 'readwrite');
+        const store = tx.objectStore('favorites');
+        if (nowFav) {
+          store.put({ key, folderId: activeFolderId, name: v.name, path: v.path, addedAt: Date.now() }, key);
+        } else {
+          store.delete(key);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+
+      if (nowFav) {
+        favoriteSet.add(key);
+      } else {
+        favoriteSet.delete(key);
+      }
+
+      updateFavoriteUI(v, nowFav);
+      renderFolderBar();
+      if (activeFolder === '__FAVORITES__') {
+        render();
+      }
+    } catch (err) {
+      console.error('切换收藏失败:', err);
+    }
+  }
+
+  function updateFavoriteUI(v, isFav) {
+    if (!v) return;
+    // 更新当前弹窗收藏按钮
+    if (modal.classList.contains('show') && currentModalIndex >= 0 && filtered[currentModalIndex] === v) {
+      if (modalFavBtn) {
+        modalFavBtn.textContent = isFav ? '★ 已收藏' : '⭐ 收藏';
+        modalFavBtn.classList.toggle('is-active', isFav);
+      }
+      showModalHud(isFav ? '⭐ 已加入收藏' : '☆ 已取消收藏');
+    }
+
+    // 更新当前 Feed 收藏按钮
+    if (feedEl.classList.contains('show')) {
+      const curSlide = feedEl.children[feedIndex];
+      if (curSlide && curSlide._srcVideo === v) {
+        if (feedFavBtn) {
+          feedFavBtn.textContent = isFav ? '★' : '☆';
+          feedFavBtn.classList.toggle('is-active', isFav);
+        }
+        showFeedHud(isFav ? '⭐ 已加入收藏' : '☆ 已取消收藏');
+      }
+    }
+
+    // 更新网格中的卡片星标
+    const cards = gridEl.querySelectorAll('.card');
+    for (const c of cards) {
+      if (c._video === v) {
+        const btn = c.querySelector('.card-fav-btn');
+        if (btn) {
+          btn.textContent = isFav ? '★' : '☆';
+          btn.classList.toggle('is-active', isFav);
+          btn.title = isFav ? '取消收藏 (S)' : '添加收藏 (S)';
+        }
+        break;
+      }
     }
   }
 
@@ -1874,7 +2071,7 @@
   async function* walk(dirHandle, path, recursive) {
     for await (const entry of dirHandle.values()) {
       if (entry.kind === 'file') {
-        if (isVideoFile(entry.name)) yield { handle: entry, path };
+        if (isVideoFile(entry.name)) yield { handle: entry, path, parentHandle: dirHandle };
       } else if (entry.kind === 'directory' && recursive) {
         yield* walk(entry, path ? `${path}/${entry.name}` : entry.name, recursive);
       }
@@ -1912,14 +2109,17 @@
     setStatus(`正在扫描「${cur.customName || cur.name}」中的视频…`);
     setControlsEnabled(false);
 
+    await loadFavoritesForActiveFolder();
+
     const recursive = recursiveChk.checked;
     let count = 0;
     try {
-      for await (const { handle: fh, path } of walk(cur.handle, '', recursive)) {
+      for await (const { handle: fh, path, parentHandle } of walk(cur.handle, '', recursive)) {
         let file;
         try { file = await fh.getFile(); } catch { continue; }
         allVideos.push({
           handle: fh,
+          parentHandle,
           name: fh.name,
           path,
           ext: extOf(fh.name),
@@ -1971,18 +2171,20 @@
     let addedCount = 0;
 
     try {
-      for await (const { handle: fh, path } of walk(cur.handle, '', recursive)) {
+      for await (const { handle: fh, path, parentHandle } of walk(cur.handle, '', recursive)) {
         let file;
         try { file = await fh.getFile(); } catch { continue; }
         const key = `${path ? path + '/' : ''}${fh.name}`;
         const existing = oldMap.get(key);
         if (existing) {
+          existing.parentHandle = parentHandle;
           if (existing.mtime === file.lastModified && existing.size === file.size) {
             existing.handle = fh;
             scannedVideos.push(existing);
           } else {
             scannedVideos.push({
               handle: fh,
+              parentHandle,
               name: fh.name,
               path,
               ext: extOf(fh.name),
@@ -1995,6 +2197,7 @@
           addedCount++;
           scannedVideos.push({
             handle: fh,
+            parentHandle,
             name: fh.name,
             path,
             ext: extOf(fh.name),
@@ -2012,6 +2215,7 @@
     cur.count = allVideos.length;
     await saveFolderState();
     renderSidebar();
+    await loadFavoritesForActiveFolder();
 
     setControlsEnabled(true);
     btnRefresh.classList.remove('is-spinning');
@@ -2055,10 +2259,122 @@
     return items;
   }
 
+  // ---------- 视频文件安全删除与级联清理 ----------
+  function getNextModalIndexAfterDelete(currentIndex, totalCountBeforeDelete) {
+    if (totalCountBeforeDelete <= 1) return -1;
+    if (currentIndex >= totalCountBeforeDelete - 1) {
+      return currentIndex - 1;
+    }
+    return currentIndex;
+  }
+
+  async function safeDeleteVideo(v) {
+    if (!v || !activeFolderId) return;
+    const cur = savedFolders.find(f => f.id === activeFolderId);
+    if (!cur || !cur.handle) return;
+
+    // 检查/请求读写权限
+    let hasPerm = false;
+    try {
+      const status = await cur.handle.queryPermission({ mode: 'readwrite' });
+      if (status === 'granted') {
+        hasPerm = true;
+      } else {
+        const req = await cur.handle.requestPermission({ mode: 'readwrite' });
+        hasPerm = (req === 'granted');
+      }
+    } catch (e) {
+      console.error('权限申请异常:', e);
+    }
+
+    if (!hasPerm) {
+      alert('未获得对本地文件夹的写入/删除权限，无法删除该文件。');
+      return;
+    }
+
+    const relPath = (v.path ? v.path + '/' : '') + v.name;
+    const ok = confirm(`确定要永久删除文件「${relPath}」吗？\n该操作将直接从本地磁盘中物理移除文件，不可恢复。`);
+    if (!ok) return;
+
+    try {
+      const parent = v.parentHandle || cur.handle;
+      if (typeof parent.removeEntry === 'function') {
+        await parent.removeEntry(v.name);
+      } else if (typeof v.handle.remove === 'function') {
+        await v.handle.remove();
+      } else {
+        throw new Error('当前环境不支持 removeEntry 或 remove 接口');
+      }
+    } catch (err) {
+      alert(`删除失败: ${err.message || err}`);
+      return;
+    }
+
+    // 级联从内存列表切除
+    const idxInAll = allVideos.indexOf(v);
+    if (idxInAll >= 0) allVideos.splice(idxInAll, 1);
+    cur.count = allVideos.length;
+    saveFolderState();
+    renderSidebar();
+
+    // 级联清理收藏记录
+    const favKey = getFavoriteKey(activeFolderId, v);
+    if (favoriteSet.has(favKey)) {
+      favoriteSet.delete(favKey);
+      try {
+        const db = await idbOpen();
+        const tx = db.transaction('favorites', 'readwrite');
+        tx.objectStore('favorites').delete(favKey);
+      } catch {}
+    }
+
+    // 级联清理缩略图缓存
+    try {
+      const thumbKey = getThumbnailCacheKey(v);
+      const db = await idbOpen();
+      const tx = db.transaction('thumbnails', 'readwrite');
+      tx.objectStore('thumbnails').delete(thumbKey);
+    } catch {}
+
+    // 级联清理断点续播记录
+    try {
+      const raw = localStorage.getItem('suishi_play_progress');
+      if (raw) {
+        const map = JSON.parse(raw);
+        const pKey = getProgressKey(v);
+        if (map[pKey]) {
+          delete map[pKey];
+          localStorage.setItem('suishi_play_progress', JSON.stringify(map));
+        }
+      }
+    } catch {}
+
+    // Modal 开启状态下的自适应索引跳转与关闭
+    if (modal.classList.contains('show')) {
+      const nextIdx = getNextModalIndexAfterDelete(currentModalIndex, filtered.length);
+      render();
+      if (nextIdx >= 0 && nextIdx < filtered.length) {
+        openModal(nextIdx);
+        showModalHud('🗑️ 已删除');
+      } else {
+        closeModal();
+        setStatus(`已删除视频「${v.name}」`);
+      }
+    } else {
+      render();
+      setStatus(`已删除视频「${v.name}」`);
+      setTimeout(() => {
+        if (statusBar.textContent.startsWith('已删除视频')) setStatus('');
+      }, 3000);
+    }
+  }
+
   function renderFolderBar() {
     folderBarEl.innerHTML = '';
-    folderBarEl.classList.toggle('show', hasFolderGroups);
-    if (!hasFolderGroups) return;
+    const favCount = allVideos.filter(isFavorited).length;
+    const shouldShow = hasFolderGroups || favCount > 0;
+    folderBarEl.classList.toggle('show', shouldShow);
+    if (!shouldShow) return;
 
     const counts = new Map();
     for (const v of allVideos) {
@@ -2071,11 +2387,11 @@
       return a.localeCompare(b, 'zh');
     });
 
-    const makePill = (label, count, key) => {
+    const makePill = (label, count, key, extraClass = '') => {
       const pill = document.createElement('button');
       pill.type = 'button';
-      pill.className = 'folder-pill' + (activeFolder === key ? ' active' : '');
-      if (key) {
+      pill.className = 'folder-pill' + (activeFolder === key ? ' active' : '') + (extraClass ? ' ' + extraClass : '');
+      if (key && key !== '__FAVORITES__') {
         const dot = document.createElement('span');
         dot.className = 'dot';
         dot.style.background = colorForFolder(key);
@@ -2094,7 +2410,12 @@
     };
 
     folderBarEl.appendChild(makePill('全部', allVideos.length, null));
-    keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k), k)));
+    if (favCount > 0 || activeFolder === '__FAVORITES__') {
+      folderBarEl.appendChild(makePill('⭐ 已收藏', favCount, '__FAVORITES__', 'fav-pill'));
+    }
+    if (hasFolderGroups) {
+      keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k), k)));
+    }
   }
 
   // ---------- 大目录分批渐进式挂载 (Chunked Append) ----------
@@ -2166,10 +2487,16 @@
 
     const q = searchInput.value.trim().toLowerCase();
     let base = allVideos.filter(v => !q || v.name.toLowerCase().includes(q) || v.path.toLowerCase().includes(q));
-    if (activeFolder) base = base.filter(v => topFolderOf(v) === activeFolder);
+    if (activeFolder === '__FAVORITES__') {
+      base = base.filter(isFavorited);
+    } else if (activeFolder) {
+      base = base.filter(v => topFolderOf(v) === activeFolder);
+    }
 
     let groups;
-    if (!hasFolderGroups || activeFolder) {
+    if (activeFolder === '__FAVORITES__') {
+      groups = [{ name: '⭐ 已收藏', items: sortGroup(base) }];
+    } else if (!hasFolderGroups || activeFolder) {
       groups = [{ name: activeFolder, items: sortGroup(base) }];
     } else {
       const map = new Map();
@@ -2215,8 +2542,9 @@
 
   function buildCard(v, idx) {
     const isPlayable = NATIVE_PLAYABLE.includes(v.ext);
+    const isFav = isFavorited(v);
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'card' + (!isPlayable ? ' is-non-playable' : '');
     card.dataset.idx = idx;
 
     const thumbWrap = document.createElement('div');
@@ -2236,6 +2564,18 @@
     durBadge.className = 'duration-badge';
     durBadge.style.display = 'none';
     thumbWrap.appendChild(durBadge);
+
+    // 星标收藏按钮
+    const favBtn = document.createElement('button');
+    favBtn.type = 'button';
+    favBtn.className = 'card-fav-btn' + (isFav ? ' is-active' : '');
+    favBtn.title = isFav ? '取消收藏 (S)' : '添加收藏 (S)';
+    favBtn.textContent = isFav ? '★' : '☆';
+    favBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavorite(v);
+    });
+    thumbWrap.appendChild(favBtn);
 
     if (isPlayable) {
       const feedBtn = document.createElement('button');
@@ -2270,6 +2610,18 @@
     sizeEl.textContent = fmtSize(v.size);
     metaEl.appendChild(pathEl);
     metaEl.appendChild(sizeEl);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'card-del-btn';
+    delBtn.title = '删除文件 (不可恢复)';
+    delBtn.textContent = '🗑️';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      safeDeleteVideo(v);
+    });
+    metaEl.appendChild(delBtn);
+
     body.appendChild(metaEl);
 
     card.appendChild(body);
@@ -2561,6 +2913,12 @@
     feedIndex = idx;
     feedCounter.textContent = `${idx + 1} / ${feedList.length}`;
     const slides = feedEl.children;
+    const curSlide = slides[idx];
+    if (curSlide && curSlide._srcVideo && feedFavBtn) {
+      const isFav = isFavorited(curSlide._srcVideo);
+      feedFavBtn.textContent = isFav ? '★' : '☆';
+      feedFavBtn.classList.toggle('is-active', isFav);
+    }
     for (let i = 0; i < slides.length; i++) {
       const slide = slides[i];
       if (Math.abs(i - idx) <= 1) {
@@ -2676,6 +3034,11 @@
     modalVideo.volume = getSavedVolume();
     modalVideo.muted = getSavedMuted();
     modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
+    const isFav = isFavorited(v);
+    if (modalFavBtn) {
+      modalFavBtn.textContent = isFav ? '★ 已收藏' : '⭐ 收藏';
+      modalFavBtn.classList.toggle('is-active', isFav);
+    }
     modal.classList.add('show');
     navPrev.style.visibility = idx > 0 ? 'visible' : 'hidden';
     navNext.style.visibility = idx < filtered.length - 1 ? 'visible' : 'hidden';
@@ -2731,6 +3094,28 @@
   modalClose.addEventListener('click', closeModal);
   modalFullscreenBtn.addEventListener('click', () => toggleFullscreen(modal));
   feedFullscreenBtn.addEventListener('click', () => toggleFullscreen(feedEl));
+  if (modalFavBtn) {
+    modalFavBtn.addEventListener('click', () => {
+      if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+        toggleFavorite(filtered[currentModalIndex]);
+      }
+    });
+  }
+  if (modalDeleteBtn) {
+    modalDeleteBtn.addEventListener('click', () => {
+      if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+        safeDeleteVideo(filtered[currentModalIndex]);
+      }
+    });
+  }
+  if (feedFavBtn) {
+    feedFavBtn.addEventListener('click', () => {
+      const cur = feedEl.children[feedIndex];
+      if (cur && cur._srcVideo) {
+        toggleFavorite(cur._srcVideo);
+      }
+    });
+  }
   navPrev.addEventListener('click', () => navigate(-1));
   navNext.addEventListener('click', () => navigate(1));
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
@@ -2765,6 +3150,11 @@
 
       if (e.key === 'Escape') {
         closeFeed();
+      } else if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (curSlide && curSlide._srcVideo) {
+          toggleFavorite(curSlide._srcVideo);
+        }
       } else if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key.toLowerCase() === 'n') {
         e.preventDefault();
         feedNavigate(1);
@@ -2797,6 +3187,16 @@
     if (modal.classList.contains('show')) {
       if (e.key === 'Escape') {
         closeModal();
+      } else if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+          toggleFavorite(filtered[currentModalIndex]);
+        }
+      } else if (e.key === 'Delete') {
+        e.preventDefault();
+        if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+          safeDeleteVideo(filtered[currentModalIndex]);
+        }
       } else if (e.key === ' ') {
         e.preventDefault();
         if (modalVideo.paused) {

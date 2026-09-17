@@ -11,8 +11,8 @@ const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 test('HTML 包含 P1 阶段关键功能所需的 DOM 元素', () => {
   // 侧边栏清理缓存按钮
   assert.match(htmlContent, /id=["']btn-clear-cache["']/, '应该存在 #btn-clear-cache 清理缩略图缓存按钮');
-  // 数据库升级至版本 3
-  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*3\)/, 'IndexedDB 版本应升级为 3');
+  // 数据库升级至版本 3 或更高
+  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*[3-9]\)/, 'IndexedDB 版本应升级为 3 或更高');
   // 包含 thumbnails 对象仓库创建
   assert.match(htmlContent, /thumbnails/, '应该包含 thumbnails 缓存表');
 });
