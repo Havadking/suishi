@@ -1083,25 +1083,38 @@
   #modal .nav-prev { left: 24px; }
   #modal .nav-next { right: 24px; }
 
-  /* 提示条 Tooltip */
-  [data-tooltip] {
-    position: relative;
+  /* 侧边栏浮层提示 Tooltip (解决侧边栏折叠后溢出裁剪问题) */
+  #sidebar-tooltip {
+    position: fixed;
+    display: none;
+    background: rgba(35, 30, 26, 0.94);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    line-height: 1.4;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  #sidebar.collapsed [data-tooltip]:hover::after {
-    content: attr(data-tooltip);
+  #sidebar-tooltip.show {
+    display: block;
+    opacity: 1;
+  }
+  #sidebar-tooltip::before {
+    content: "";
     position: absolute;
-    left: calc(100% + 10px);
+    right: 100%;
     top: 50%;
     transform: translateY(-50%);
-    background: #2D2724;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 99;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-    pointer-events: none;
+    border: 5px solid transparent;
+    border-right-color: rgba(35, 30, 26, 0.94);
   }
 
   /* HUD 居中浮层提示 */
@@ -1397,6 +1410,9 @@
   </div>
 </div>
 
+<!-- 侧边栏折叠态浮层提示 -->
+<div id="sidebar-tooltip"></div>
+
 <script>
 (() => {
   const VIDEO_EXT = ['mp4','webm','ogg','ogv','mov','m4v','mkv','avi','wmv','flv','ts'];
@@ -1408,6 +1424,7 @@
   const btnAddFolder = $('btn-add-folder');
   const sidebarFolderList = $('sidebar-folder-list');
   const sidebarFolderCount = $('sidebar-folder-count');
+  const sidebarTooltip = $('sidebar-tooltip');
   const btnPickEmpty = $('btn-pick-empty');
 
   const searchInput = $('search');
@@ -1866,6 +1883,7 @@
     btnToggleSidebar.addEventListener('click', () => {
       sidebarEl.classList.toggle('collapsed');
       localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+      if (sidebarTooltip) sidebarTooltip.classList.remove('show');
     });
 
     document.addEventListener('keydown', (e) => {
@@ -1873,7 +1891,60 @@
         e.preventDefault();
         sidebarEl.classList.toggle('collapsed');
         localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+        if (sidebarTooltip) sidebarTooltip.classList.remove('show');
       }
+    });
+
+    // 侧边栏折叠状态下悬停显示文件夹名称
+    let activeTooltipItem = null;
+    sidebarFolderList.addEventListener('mouseover', (e) => {
+      const item = e.target.closest('.folder-item');
+      if (!item) return;
+
+      const displayName = item.getAttribute('data-tooltip') || '';
+      if (sidebarEl.classList.contains('collapsed')) {
+        item.removeAttribute('title');
+        if (item !== activeTooltipItem) {
+          activeTooltipItem = item;
+          if (displayName && sidebarTooltip) {
+            sidebarTooltip.textContent = displayName;
+            const rect = item.getBoundingClientRect();
+            sidebarTooltip.style.left = `${rect.right + 8}px`;
+            sidebarTooltip.style.top = `${rect.top + rect.height / 2}px`;
+            sidebarTooltip.style.transform = 'translateY(-50%)';
+            sidebarTooltip.classList.add('show');
+          }
+        }
+      } else {
+        if (displayName && !item.getAttribute('title')) {
+          item.setAttribute('title', displayName);
+        }
+        if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+      }
+    });
+
+    sidebarFolderList.addEventListener('mouseout', (e) => {
+      const item = e.target.closest('.folder-item');
+      if (item && (!e.relatedTarget || !item.contains(e.relatedTarget))) {
+        if (item === activeTooltipItem) {
+          activeTooltipItem = null;
+          if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+        }
+        const displayName = item.getAttribute('data-tooltip');
+        if (displayName && !sidebarEl.classList.contains('collapsed')) {
+          item.setAttribute('title', displayName);
+        }
+      }
+    });
+
+    sidebarFolderList.addEventListener('scroll', () => {
+      activeTooltipItem = null;
+      if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+    });
+
+    window.addEventListener('resize', () => {
+      activeTooltipItem = null;
+      if (sidebarTooltip) sidebarTooltip.classList.remove('show');
     });
 
     const btnClearCache = $('btn-clear-cache');
@@ -1900,6 +1971,7 @@
       item.className = 'folder-item' + (folder.id === activeFolderId ? ' active' : '');
       const displayName = folder.customName || folder.name;
       item.setAttribute('data-tooltip', displayName);
+      item.setAttribute('title', displayName);
 
       const icon = document.createElement('div');
       icon.className = 'folder-item-icon';
@@ -1955,7 +2027,10 @@
       item.appendChild(details);
       item.appendChild(actions);
 
-      item.addEventListener('click', () => switchFolder(folder.id));
+      item.addEventListener('click', () => {
+        if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+        switchFolder(folder.id);
+      });
       sidebarFolderList.appendChild(item);
     });
   }
@@ -3355,6 +3430,7 @@
       $('btn-open-sidebar').addEventListener('click', () => {
         sidebarEl.classList.toggle('collapsed');
         localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+        if (sidebarTooltip) sidebarTooltip.classList.remove('show');
       });
     }
     if (!window.showDirectoryPicker) {
