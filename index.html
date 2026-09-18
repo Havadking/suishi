@@ -2332,6 +2332,15 @@
       if (sidebarTooltip) sidebarTooltip.classList.remove('show');
     });
 
+    const brandWrap = document.querySelector('.brand-wrap');
+    if (brandWrap) {
+      brandWrap.style.cursor = 'pointer';
+      brandWrap.setAttribute('title', '返回视频抽屉');
+      brandWrap.addEventListener('click', () => {
+        if (currentView !== 'library') showView('library');
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
@@ -2476,6 +2485,10 @@
 
       item.addEventListener('click', () => {
         if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+        if (currentView !== 'library') {
+          showView('library');
+          if (folder.id === activeFolderId) return;
+        }
         switchFolder(folder.id);
       });
       sidebarFolderList.appendChild(item);
@@ -2504,6 +2517,9 @@
 
   async function switchFolder(id) {
     if (!id) return;
+    if (currentView !== 'library') {
+      showView('library');
+    }
     activeFolderId = id;
     await idbSet('activeFolderId', activeFolderId);
     renderSidebar();
@@ -2517,6 +2533,9 @@
     }
     try {
       const handle = await window.showDirectoryPicker({ mode: 'read' });
+      if (currentView !== 'library') {
+        showView('library');
+      }
       // 查重：若同名则提示或切换
       const existing = savedFolders.find(f => f.name === handle.name);
       if (existing) {

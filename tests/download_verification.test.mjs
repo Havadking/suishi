@@ -117,3 +117,23 @@ test('播放器与 Feed 接入了拾光笺按钮、G 快捷键与 sidecar 级联
   // 只接受本机地址：不允许把随拾指向外网服务
   assert.match(scriptCode, /localhost\|127\\\.0\\\.0\\\.1/, '连接设置应校验为本机地址');
 });
+
+// ---------- 6. 视图路由与目录切换返回 ----------
+test('在下载页点击已添加文件夹或调用 switchFolder 时切回 library 视图', () => {
+  assert.match(
+    scriptCode,
+    /item\.addEventListener\('click',\s*\(\)\s*=>\s*\{[\s\S]*?if\s*\(\s*currentView\s*!==\s*['"]library['"]\s*\)\s*\{[\s\S]*?showView\(['"]library['"]\)/,
+    'renderSidebar 点击目录项时若在下载页应切回 library'
+  );
+  assert.match(
+    scriptCode,
+    /async\s+function\s+switchFolder\([\s\S]*?if\s*\(\s*currentView\s*!==\s*['"]library['"]\s*\)\s*\{\s*showView\(['"]library['"]\);?\s*\}/,
+    'switchFolder 函数内部应在 currentView !== library 时自动切换回 library'
+  );
+  assert.match(
+    scriptCode,
+    /async\s+function\s+addNewFolder\([\s\S]*?if\s*\(\s*currentView\s*!==\s*['"]library['"]\s*\)\s*\{\s*showView\(['"]library['"]\);?\s*\}/,
+    'addNewFolder 添加新目录后应切回 library 视图'
+  );
+});
+
