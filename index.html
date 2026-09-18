@@ -292,12 +292,7 @@
     white-space: nowrap;
   }
   .folder-group-badge {
-    font-size: 10px;
-    padding: 1px 6px;
-    background: var(--bg-hover);
-    color: var(--text-muted);
-    border-radius: var(--radius-full);
-    font-weight: 600;
+    display: none !important; /* 去掉数量角标，保持界面纯净整洁 */
   }
   .folder-group-actions {
     display: none;
@@ -349,92 +344,76 @@
     color: var(--text-muted);
   }
 
-  /* 折叠侧边栏下的分组呈现：清晰卡片式胶囊岛与徽标 */
+  /* 折叠侧边栏下的分组呈现：精致温润胶囊卡片，无冗余角标 */
   #sidebar.collapsed .folder-group-section {
-    background: var(--bg-surface);
-    border: 1.5px solid var(--border);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
-    margin: 6px 6px 10px;
-    padding: 5px 2px 4px;
+    margin: 5px 6px 8px;
+    padding: 4px 0 3px;
     position: relative;
-    box-shadow: 0 1px 3px rgba(65, 45, 30, 0.05);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(65, 45, 30, 0.03);
+    transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   #sidebar.collapsed .folder-group-section:hover {
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(224, 122, 95, 0.18);
+    background: var(--bg-hover);
+    border-color: var(--accent-border);
+    box-shadow: 0 2px 8px rgba(224, 122, 95, 0.08);
   }
   #sidebar.collapsed .folder-group-header {
     justify-content: center;
-    padding: 2px 0 4px;
+    padding: 2px 0;
     position: relative;
+    border-radius: var(--radius-sm);
   }
   #sidebar.collapsed .folder-group-header .folder-group-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--accent-subtle);
+    width: 34px;
+    height: 34px;
+    background: transparent;
     border-radius: var(--radius-sm);
-    font-size: 16px;
-    box-shadow: inset 0 0 0 1px var(--accent-border);
-    transition: transform 0.12s ease;
-  }
-  #sidebar.collapsed .folder-group-header:hover .folder-group-icon {
-    transform: scale(1.08);
-  }
-  #sidebar.collapsed .folder-group-header .folder-group-badge {
-    display: flex !important;
-    position: absolute;
-    top: -3px;
-    right: 5px;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 3px;
-    font-size: 9px;
-    font-weight: 700;
+    font-size: 17px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent);
-    color: #fff;
-    border-radius: var(--radius-full);
-    border: 1.5px solid var(--bg-surface);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-    pointer-events: none;
-    line-height: 1;
+    transition: transform 0.15s ease, background 0.15s ease;
   }
-  #sidebar.collapsed .folder-group-header .folder-group-badge[data-count="0"] {
-    background: var(--text-light);
+  #sidebar.collapsed .folder-group-header:hover .folder-group-icon {
+    background: rgba(255, 255, 255, 0.7);
+    transform: scale(1.08);
   }
+  #sidebar.collapsed .folder-group-header .folder-group-badge,
   #sidebar.collapsed .folder-group-header .group-arrow,
   #sidebar.collapsed .folder-group-header .folder-group-name,
   #sidebar.collapsed .folder-group-header .folder-group-actions,
   #sidebar.collapsed .ungrouped-header .folder-group-name,
   #sidebar.collapsed .ungrouped-header .folder-group-badge {
-    display: none;
+    display: none !important;
   }
   #sidebar.collapsed .folder-group-items {
     padding-left: 0;
-    margin-top: 4px;
-    border-top: 1px dashed var(--border-light);
+    margin: 3px 6px 0;
+    border-top: 1px solid rgba(232, 224, 213, 0.65);
     padding-top: 3px;
   }
   #sidebar.collapsed .folder-group-items.collapsed {
     display: none;
   }
   #sidebar.collapsed .folder-group-items .folder-item {
-    padding: 6px 0;
-    margin: 2px 2px;
+    padding: 5px 0;
+    margin: 1px 3px;
     border-radius: var(--radius-sm);
+    transition: background 0.12s ease;
   }
   #sidebar.collapsed .folder-group-items .folder-item:hover {
-    background: var(--bg-subtle);
+    background: rgba(255, 255, 255, 0.85);
   }
   #sidebar.collapsed .group-empty-hint {
     display: none;
   }
   #sidebar.collapsed .ungrouped-section {
-    margin-top: 10px;
-    padding-top: 6px;
-    border-top: 1.5px dashed var(--border);
+    margin-top: 8px;
+    padding-top: 5px;
+    border-top: 1px dashed var(--border-light);
   }
   #sidebar.collapsed .ungrouped-header {
     display: flex;

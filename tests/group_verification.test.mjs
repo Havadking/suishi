@@ -154,12 +154,12 @@ test('分组折叠状态翻转与重名校验算法', () => {
   assert.equal(validateGroupName('游戏').valid, true, '新名称合法');
 });
 
-// ---------- 6. 验证侧边栏收起时的分组卡片化与角标规则 ----------
-test('侧边栏折叠状态下分组具备卡片化边框与右上角目录数量角标', () => {
-  // 必须包含折叠态下分组容器的卡片化样式
-  assert.match(htmlContent, /#sidebar\.collapsed\s+\.folder-group-section\s*\{[\s\S]*?border:/, '折叠态分组应具备独立卡片边框');
-  // 必须包含折叠态下分组角标可见性
-  assert.match(htmlContent, /#sidebar\.collapsed\s+\.folder-group-header\s+\.folder-group-badge\s*\{[\s\S]*?display:\s*flex/, '折叠态下分组右上角角标应保持可见');
+// ---------- 6. 验证侧边栏收起时的分组卡片化与角标隐藏规则 ----------
+test('侧边栏分组具备温润卡片边框且已去除数量角标', () => {
+  // 必须包含折叠态下分组容器的卡片化样式与细腻边框
+  assert.match(htmlContent, /#sidebar\.collapsed\s+\.folder-group-section\s*\{[\s\S]*?border:/, '折叠态分组应具备细腻卡片边框');
+  // 数量角标应被隐藏，保持界面干净
+  assert.match(htmlContent, /\.folder-group-badge\s*\{[\s\S]*?display:\s*none/, '数量角标应被隐藏');
   // 必须包含折叠态悬停提示富文本卡片逻辑
   assert.match(htmlContent, /sidebarTooltip\.innerHTML\s*=/, '悬停应生成富文本卡片展示分组及目录');
 });
