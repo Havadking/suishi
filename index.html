@@ -755,23 +755,37 @@
     right: 7px;
   }
 
+  .card-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .card-rename-btn,
   .card-del-btn {
     background: transparent;
     border: none;
     cursor: pointer;
     font-size: 12px;
-    padding: 2px 5px;
+    padding: 2px 4px;
     border-radius: 4px;
     opacity: 0.45;
-    margin-left: auto;
     transition: opacity 0.15s, background 0.15s;
     line-height: 1;
     display: inline-flex;
     align-items: center;
   }
+  .card-rename-btn:hover {
+    opacity: 1;
+    background: var(--bg-hover, rgba(0, 0, 0, 0.08));
+  }
   .card-del-btn:hover {
     opacity: 1;
     background: var(--danger-subtle);
+  }
+  .rename-input:focus {
+    border-color: var(--accent) !important;
   }
 
   .card-body {
@@ -1810,6 +1824,7 @@
     <button id="modal-source" style="display:none;" title="打开原链接">🔗 原链接</button>
     <button id="modal-glean" style="display:none;" title="发送到拾光笺转写 / 查看转写 (G)">📝 拾光笺</button>
     <button id="modal-fav" title="星标收藏 (S)">⭐ 收藏</button>
+    <button id="modal-rename" title="重命名当前视频 (F2)">✏️ 重命名</button>
     <button id="modal-delete" class="danger" title="删除当前视频 (Delete)">🗑️ 删除</button>
     <button id="modal-fullscreen" title="全屏 (F)">⛶ 全屏</button>
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
@@ -1829,6 +1844,7 @@
   <div style="display:flex;gap:8px;align-items:center;">
     <button id="feed-glean" style="display:none;" title="发送到拾光笺 (G)">📝</button>
     <button id="feed-fav" title="星标收藏 (S)">☆</button>
+    <button id="feed-rename" title="重命名当前视频 (F2)">✏️</button>
     <button id="feed-fullscreen" title="全屏 (F)">⛶</button>
     <button id="feed-mute" title="静音/取消静音">🔇</button>
   </div>
@@ -1852,6 +1868,26 @@
     <div class="dialog-actions">
       <button id="btn-np-copy" class="btn-normal">📋 复制相对路径</button>
       <button id="btn-np-close" class="btn-accent">知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 视频重命名弹窗 -->
+<div id="rename-modal" class="custom-dialog-backdrop">
+  <div class="custom-dialog" style="max-width: 440px;">
+    <div class="dialog-icon-wrap">✏️</div>
+    <h3>重命名视频</h3>
+    <div class="dialog-desc" style="margin-bottom: 12px; text-align: center;">
+      请输入新的视频文件名（无需输入扩展名）：
+    </div>
+    <div style="margin: 0 0 8px; display: flex; align-items: center; gap: 8px;">
+      <input id="rename-input" class="rename-input" type="text" style="flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-size: 14px; background: var(--bg-surface); color: var(--text-main); outline: none; transition: border-color 0.15s;" placeholder="新的文件名…">
+      <span id="rename-ext" style="font-size: 13px; font-weight: 600; color: var(--text-light); padding: 0 4px;">.mp4</span>
+    </div>
+    <div id="rename-msg" style="font-size: 12px; color: var(--danger); min-height: 18px; margin-bottom: 16px; text-align: left;"></div>
+    <div class="dialog-actions">
+      <button id="btn-rename-cancel" class="btn-normal">取消</button>
+      <button id="btn-rename-confirm" class="btn-accent">确认重命名</button>
     </div>
   </div>
 </div>
@@ -1898,8 +1934,10 @@
 
   const btnRefresh = $('btn-refresh');
   const modalFavBtn = $('modal-fav');
+  const modalRenameBtn = $('modal-rename');
   const modalDeleteBtn = $('modal-delete');
   const feedFavBtn = $('feed-fav');
+  const feedRenameBtn = $('feed-rename');
   const modalFullscreenBtn = $('modal-fullscreen');
   const modalHud = $('modal-hud');
   const feedFullscreenBtn = $('feed-fullscreen');
@@ -1909,6 +1947,14 @@
   const npPath = $('np-path');
   const btnNpCopy = $('btn-np-copy');
   const btnNpClose = $('btn-np-close');
+  const renameModal = $('rename-modal');
+  const renameInput = $('rename-input');
+  const renameExt = $('rename-ext');
+  const renameMsg = $('rename-msg');
+  const btnRenameCancel = $('btn-rename-cancel');
+  const btnRenameConfirm = $('btn-rename-confirm');
+  let renameTargetVideo = null;
+  let lastHoveredVideo = null;
 
   const SPEED_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   let modalHudTimer = null;
@@ -2938,6 +2984,231 @@
     }
   }
 
+  // ---------- 视频重命名交互与底层实现 ----------
+  function openRenameDialog(v) {
+    if (!v) return;
+    renameTargetVideo = v;
+    renameInput.value = stemOf(v.name);
+    renameExt.textContent = '.' + v.ext;
+    renameMsg.textContent = '';
+    renameModal.classList.add('show');
+    setTimeout(() => {
+      renameInput.focus();
+      renameInput.select();
+    }, 50);
+  }
+
+  function closeRenameDialog() {
+    if (renameModal) renameModal.classList.remove('show');
+    renameTargetVideo = null;
+    if (renameMsg) renameMsg.textContent = '';
+  }
+
+  if (btnRenameCancel) btnRenameCancel.addEventListener('click', closeRenameDialog);
+  if (renameModal) {
+    renameModal.addEventListener('click', (e) => {
+      if (e.target === renameModal) closeRenameDialog();
+    });
+  }
+
+  async function handleRenameSubmit() {
+    if (!renameTargetVideo) return;
+    const v = renameTargetVideo;
+    const raw = renameInput.value.trim();
+    const newStem = raw.replace(new RegExp(`\\.${v.ext}$`, 'i'), '').trim();
+
+    if (!newStem) {
+      renameMsg.textContent = '视频名称不能为空';
+      return;
+    }
+    if (/[\\/:*?"<>|]/.test(newStem)) {
+      renameMsg.textContent = '名称不能包含字符：\\ / : * ? " < > |';
+      return;
+    }
+    const currentStem = stemOf(v.name);
+    if (newStem === currentStem) {
+      closeRenameDialog();
+      return;
+    }
+
+    const newFullName = `${newStem}.${v.ext}`;
+    const dup = allVideos.find(x => (x.path || '') === (v.path || '') && x.name.toLowerCase() === newFullName.toLowerCase() && x !== v);
+    if (dup) {
+      renameMsg.textContent = `当前目录下已存在「${newFullName}」`;
+      return;
+    }
+
+    btnRenameConfirm.disabled = true;
+    btnRenameConfirm.textContent = '重命名中…';
+    try {
+      const ok = await performRenameVideo(v, newStem);
+      if (ok) {
+        closeRenameDialog();
+      }
+    } finally {
+      btnRenameConfirm.disabled = false;
+      btnRenameConfirm.textContent = '确认重命名';
+    }
+  }
+
+  if (btnRenameConfirm) btnRenameConfirm.addEventListener('click', handleRenameSubmit);
+  if (renameInput) {
+    renameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleRenameSubmit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeRenameDialog();
+      }
+    });
+  }
+
+  async function performRenameVideo(v, newStem) {
+    if (!v || !activeFolderId) return false;
+    const cur = savedFolders.find(f => f.id === activeFolderId);
+    if (!cur || !cur.handle) return false;
+
+    // 1. 检查/申请读写权限
+    let hasPerm = false;
+    try {
+      const status = await cur.handle.queryPermission({ mode: 'readwrite' });
+      if (status === 'granted') {
+        hasPerm = true;
+      } else {
+        const req = await cur.handle.requestPermission({ mode: 'readwrite' });
+        hasPerm = (req === 'granted');
+      }
+    } catch (e) {
+      console.error('权限申请异常:', e);
+    }
+    if (!hasPerm) {
+      alert('未获得对本地文件夹的写入权限，无法重命名该文件。');
+      return false;
+    }
+
+    const oldFullName = v.name;
+    const newFullName = `${newStem}.${v.ext}`;
+    const parent = v.parentHandle || cur.handle;
+
+    // 2. 物理重命名视频文件
+    try {
+      if (typeof v.handle.move === 'function') {
+        await v.handle.move(newFullName);
+      } else {
+        const newFh = await parent.getFileHandle(newFullName, { create: true });
+        const writable = await newFh.createWritable();
+        const file = await v.handle.getFile();
+        await file.stream().pipeTo(writable);
+        await parent.removeEntry(v.name);
+        v.handle = newFh;
+      }
+    } catch (err) {
+      alert(`重命名文件失败: ${err.message || err}`);
+      return false;
+    }
+
+    // 3. 同步重命名与更新 sidecar（.suishi.json）
+    if (v.sidecarHandle) {
+      try {
+        const oldSidecarName = v.sidecarHandle.name;
+        const newSidecarName = `${newStem}${SIDECAR_SUFFIX}`;
+        let sidecarData = null;
+        try {
+          const sFile = await v.sidecarHandle.getFile();
+          sidecarData = JSON.parse(await sFile.text());
+        } catch {}
+
+        if (typeof v.sidecarHandle.move === 'function') {
+          await v.sidecarHandle.move(newSidecarName);
+        } else {
+          const newSh = await parent.getFileHandle(newSidecarName, { create: true });
+          const sFile = await v.sidecarHandle.getFile();
+          const writable = await newSh.createWritable();
+          await sFile.stream().pipeTo(writable);
+          await parent.removeEntry(oldSidecarName);
+          v.sidecarHandle = newSh;
+        }
+
+        if (sidecarData && typeof sidecarData === 'object') {
+          sidecarData.title = newStem;
+          const writable = await v.sidecarHandle.createWritable();
+          await writable.write(JSON.stringify(sidecarData, null, 2));
+          await writable.close();
+          v._sidecarPromise = Promise.resolve(sidecarData);
+        }
+      } catch (e) {
+        console.warn('sidecar 同步重命名异常:', e);
+      }
+    }
+
+    // 4. 更新收藏记录
+    const oldFavKey = getFavoriteKey(activeFolderId, v);
+    const wasFav = favoriteSet.has(oldFavKey);
+    v.name = newFullName;
+
+    if (wasFav) {
+      favoriteSet.delete(oldFavKey);
+      const newFavKey = getFavoriteKey(activeFolderId, v);
+      favoriteSet.add(newFavKey);
+      try {
+        const db = await idbOpen();
+        const tx = db.transaction('favorites', 'readwrite');
+        const store = tx.objectStore('favorites');
+        store.delete(oldFavKey);
+        store.put({
+          key: newFavKey,
+          folderId: activeFolderId,
+          relPath: (v.path ? v.path + '/' : '') + v.name,
+          addedAt: Date.now()
+        });
+      } catch {}
+    }
+
+    // 5. 迁移缩略图缓存 Key
+    const oldThumbKey = `${activeFolderId || ''}:${(v.path ? v.path + '/' : '') + oldFullName}:${v.size}:${v.mtime}`;
+    const newThumbKey = getThumbnailCacheKey(v);
+    try {
+      const db = await idbOpen();
+      const tx = db.transaction('thumbnails', 'readwrite');
+      const store = tx.objectStore('thumbnails');
+      const req = store.get(oldThumbKey);
+      req.onsuccess = () => {
+        if (req.result) {
+          store.put(req.result, newThumbKey);
+          store.delete(oldThumbKey);
+        }
+      };
+    } catch {}
+
+    // 6. 迁移断点续播进度 Key
+    const oldProgKey = `${activeFolderId || ''}:${(v.path ? v.path + '/' : '') + oldFullName}`;
+    const newProgKey = getProgressKey(v);
+    try {
+      const raw = localStorage.getItem('suishi_play_progress');
+      if (raw) {
+        const map = JSON.parse(raw);
+        if (map[oldProgKey]) {
+          map[newProgKey] = map[oldProgKey];
+          delete map[oldProgKey];
+          localStorage.setItem('suishi_play_progress', JSON.stringify(map));
+        }
+      }
+    } catch {}
+
+    // 7. 更新视图与提示
+    render();
+    if (modal.classList.contains('show') && filtered[currentModalIndex] === v) {
+      modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
+      updateModalSource(v);
+      showModalHud('✏️ 已重命名');
+    } else {
+      transientStatus(`已将视频重命名为「${newFullName}」`, 3500);
+    }
+
+    return true;
+  }
+
   function renderFolderBar() {
     folderBarEl.innerHTML = '';
     const favCount = allVideos.filter(isFavorited).length;
@@ -3189,6 +3460,20 @@
     metaEl.appendChild(pathEl);
     metaEl.appendChild(sizeEl);
 
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'card-actions';
+
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'card-rename-btn';
+    renameBtn.title = '重命名视频文件 (F2)';
+    renameBtn.textContent = '✏️';
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRenameDialog(v);
+    });
+    actionsEl.appendChild(renameBtn);
+
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'card-del-btn';
@@ -3198,7 +3483,9 @@
       e.stopPropagation();
       safeDeleteVideo(v);
     });
-    metaEl.appendChild(delBtn);
+    actionsEl.appendChild(delBtn);
+
+    metaEl.appendChild(actionsEl);
 
     body.appendChild(metaEl);
 
@@ -3210,6 +3497,9 @@
     card._video = v;
     card._nameEl = nameEl;
     card._sourceBadge = sourceBadge;
+
+    card.addEventListener('mouseenter', () => { lastHoveredVideo = v; });
+    card.addEventListener('mouseleave', () => { if (lastHoveredVideo === v) lastHoveredVideo = null; });
 
     card.addEventListener('click', () => {
       if (!isPlayable) {
@@ -3684,6 +3974,13 @@
       }
     });
   }
+  if (modalRenameBtn) {
+    modalRenameBtn.addEventListener('click', () => {
+      if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+        openRenameDialog(filtered[currentModalIndex]);
+      }
+    });
+  }
   if (modalDeleteBtn) {
     modalDeleteBtn.addEventListener('click', () => {
       if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
@@ -3696,6 +3993,14 @@
       const cur = feedEl.children[feedIndex];
       if (cur && cur._srcVideo) {
         toggleFavorite(cur._srcVideo);
+      }
+    });
+  }
+  if (feedRenameBtn) {
+    feedRenameBtn.addEventListener('click', () => {
+      const cur = feedEl.children[feedIndex];
+      if (cur && cur._srcVideo) {
+        openRenameDialog(cur._srcVideo);
       }
     });
   }
@@ -3714,6 +4019,15 @@
     // 忽略表单输入焦点中的快捷键
     const activeTag = document.activeElement ? document.activeElement.tagName : '';
     if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+      return;
+    }
+
+    // 重命名弹窗打开时
+    if (renameModal && renameModal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeRenameDialog();
+      }
       return;
     }
 
@@ -3737,6 +4051,11 @@
         e.preventDefault();
         if (curSlide && curSlide._srcVideo) {
           toggleFavorite(curSlide._srcVideo);
+        }
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        if (curSlide && curSlide._srcVideo) {
+          openRenameDialog(curSlide._srcVideo);
         }
       } else if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key.toLowerCase() === 'n') {
         e.preventDefault();
@@ -3777,6 +4096,11 @@
         e.preventDefault();
         if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
           toggleFavorite(filtered[currentModalIndex]);
+        }
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+          openRenameDialog(filtered[currentModalIndex]);
         }
       } else if (e.key === 'Delete') {
         e.preventDefault();
@@ -3841,7 +4165,12 @@
     }
 
     // 全局主界面快捷键
-    if ((e.key === 'r' || e.key === 'R') && activeFolderId) {
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (lastHoveredVideo) {
+        openRenameDialog(lastHoveredVideo);
+      }
+    } else if ((e.key === 'r' || e.key === 'R') && activeFolderId) {
       e.preventDefault();
       rescanActiveFolder();
     }
