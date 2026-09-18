@@ -137,3 +137,81 @@ test('在下载页点击已添加文件夹或调用 switchFolder 时切回 libra
   );
 });
 
+// ---------- 7. 视频重命名联动 dlJobs 与 sidecar.file_name ----------
+test('重命名视频时同步更新 sidecar.file_name 与 dlJobs 内存记录', () => {
+  assert.match(scriptCode, /sidecarData\.file_name\s*=\s*newFullName/, '重命名时应同步更新 sidecar 内的 file_name 字段');
+  assert.match(scriptCode, /for\s*\(\s*const\s+j\s+of\s+dlJobs\.values\(\)\s*\)/, '重命名时应遍历 dlJobs 同步更新记录');
+  assert.match(scriptCode, /j\.file_path\s*=\s*oldDir\s*\+\s*newFullName/, '重命名时应更新对应 job 的 file_path');
+  assert.match(scriptCode, /j\.title\s*=\s*newStem/, '重命名时应更新对应 job 的 title');
+  assert.match(scriptCode, /j\.file_exists\s*=\s*true/, '重命名时应确认 job.file_exists 为 true');
+
+  // 算法行为验证
+  const dlJobs = new Map([
+    ['job1', { id: 'job1', video_id: '7686787519220098451', url: 'https://www.douyin.com/video/7686787519220098451',
+               file_path: 'E:\\videos\\Douyin video #7686787519220098451.mp4', title: 'Douyin video #7686787519220098451', file_exists: true }]
+  ]);
+  const oldFullName = 'Douyin video #7686787519220098451.mp4';
+  const newStem = 'iPhone18破发';
+  const newFullName = 'iPhone18破发.mp4';
+  const sidecarData = { video_id: '7686787519220098451', url: 'https://www.douyin.com/video/7686787519220098451' };
+
+  for (const j of dlJobs.values()) {
+    if ((sidecarData && (j.video_id === sidecarData.video_id || j.url === sidecarData.url))
+        || (j.file_path && j.file_path.endsWith(oldFullName))) {
+      const oldDir = j.file_path.substring(0, Math.max(j.file_path.lastIndexOf('/'), j.file_path.lastIndexOf('\\')) + 1);
+      j.file_path = oldDir + newFullName;
+      j.title = newStem;
+      j.file_exists = true;
+    }
+  }
+
+  const updated = dlJobs.get('job1');
+  assert.equal(updated.file_path, 'E:\\videos\\iPhone18破发.mp4');
+  assert.equal(updated.title, 'iPhone18破发');
+  assert.equal(updated.file_exists, true);
+});
+
+// ---------- 8. playDownloadedJob 别名自愈解析 ----------
+test('playDownloadedJob 能通过 sidecar 的 video_id / url 兜底匹配已改名的视频', async () => {
+  assert.match(scriptCode, /readSidecar\(cand\)/, 'playDownloadedJob 兜底应读取候选视频 sidecar');
+  assert.match(scriptCode, /j\.video_id\s*&&\s*meta\.video_id\s*===\s*j\.video_id/, '应通过 video_id 进行别名匹配');
+
+  // 模拟兜底解析逻辑
+  const j = {
+    id: 'j1',
+    video_id: '7686787519220098451',
+    url: 'https://www.douyin.com/video/7686787519220098451',
+    file_path: 'E:\\videos\\Douyin video #7686787519220098451.mp4',
+    title: 'Douyin video #7686787519220098451'
+  };
+
+  const allVideos = [
+    { name: '无关视频.mp4', sidecarHandle: null },
+    {
+      name: 'iPhone18破发.mp4',
+      sidecarHandle: { name: 'iPhone18破发.suishi.json' },
+      meta: { video_id: '7686787519220098451', url: 'https://www.douyin.com/video/7686787519220098451', title: 'iPhone18破发' }
+    }
+  ];
+
+  let matchedVideo = null;
+  for (const cand of allVideos) {
+    if (!cand.sidecarHandle) continue;
+    const meta = cand.meta;
+    if (meta && ((j.video_id && meta.video_id === j.video_id) || (j.url && meta.url === j.url))) {
+      const oldDir = j.file_path.substring(0, Math.max(j.file_path.lastIndexOf('/'), j.file_path.lastIndexOf('\\')) + 1);
+      j.file_path = oldDir + cand.name;
+      j.title = meta.title;
+      j.file_exists = true;
+      matchedVideo = cand;
+      break;
+    }
+  }
+
+  assert.ok(matchedVideo, '应成功匹配到被改名后的视频');
+  assert.equal(matchedVideo.name, 'iPhone18破发.mp4');
+  assert.equal(j.file_path, 'E:\\videos\\iPhone18破发.mp4');
+  assert.equal(j.title, 'iPhone18破发');
+  assert.equal(j.file_exists, true);
+});
+

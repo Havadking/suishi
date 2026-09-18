@@ -3136,6 +3136,7 @@
 
         if (sidecarData && typeof sidecarData === 'object') {
           sidecarData.title = newStem;
+          sidecarData.file_name = newFullName;
         }
 
         let sidecarMoved = false;
@@ -3222,7 +3223,35 @@
       }
     } catch {}
 
-    // 7. 更新视图与提示
+    // 7. 同步更新下载任务列表中的对应记录（若存在）
+    let dlJobsUpdated = false;
+    for (const j of dlJobs.values()) {
+      if ((v.sidecarHandle && ((j.video_id && v._sidecarPromise) || (j.url && v._sidecarPromise)))
+          || (j.file_path && basenameOf(j.file_path) === oldFullName)) {
+        // 读取已缓存的 sidecar 判断是否对应同一视频
+        let matches = (j.file_path && basenameOf(j.file_path) === oldFullName);
+        if (!matches && v._sidecarPromise) {
+          try {
+            const meta = await v._sidecarPromise;
+            if (meta && ((j.video_id && meta.video_id === j.video_id) || (j.url && meta.url === j.url))) {
+              matches = true;
+            }
+          } catch {}
+        }
+        if (matches) {
+          const oldDir = j.file_path ? j.file_path.substring(0, Math.max(j.file_path.lastIndexOf('/'), j.file_path.lastIndexOf('\\')) + 1) : '';
+          j.file_path = oldDir + newFullName;
+          j.title = newStem;
+          j.file_exists = true;
+          dlJobsUpdated = true;
+        }
+      }
+    }
+    if (dlJobsUpdated && currentView === 'download') {
+      renderDlJobs();
+    }
+
+    // 8. 更新视图与提示
     render();
     if (modal.classList.contains('show') && filtered[currentModalIndex] === v) {
       modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
@@ -4749,6 +4778,27 @@
     if (idx < 0) {
       await rescanActiveFolder();
       idx = filtered.findIndex(v => v.name === targetName);
+    }
+    if (idx < 0) {
+      // 兜底：如果文件被重命名过，通过同名 sidecar 元数据（video_id / url）匹配定位
+      for (let i = 0; i < allVideos.length; i++) {
+        const cand = allVideos[i];
+        if (!cand.sidecarHandle) continue;
+        const meta = await readSidecar(cand);
+        if (meta && ((j.video_id && meta.video_id === j.video_id) || (j.url && meta.url === j.url))) {
+          const oldDir = j.file_path ? j.file_path.substring(0, Math.max(j.file_path.lastIndexOf('/'), j.file_path.lastIndexOf('\\')) + 1) : '';
+          j.file_path = oldDir + cand.name;
+          j.title = meta.title || stemOf(cand.name);
+          j.file_exists = true;
+          if (searchInput.value || activeFolder) {
+            searchInput.value = '';
+            activeFolder = null;
+            render();
+          }
+          idx = filtered.indexOf(cand);
+          break;
+        }
+      }
     }
     if (idx >= 0) openModal(idx);
     else transientStatus(`在抽屉里没找到「${targetName}」，请确认绑定的目录就是拾光笺的下载目录`, 6000);
