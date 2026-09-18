@@ -349,22 +349,101 @@
     color: var(--text-muted);
   }
 
+  /* 折叠侧边栏下的分组呈现：清晰卡片式胶囊岛与徽标 */
+  #sidebar.collapsed .folder-group-section {
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    margin: 6px 6px 10px;
+    padding: 5px 2px 4px;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(65, 45, 30, 0.05);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  #sidebar.collapsed .folder-group-section:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(224, 122, 95, 0.18);
+  }
   #sidebar.collapsed .folder-group-header {
     justify-content: center;
-    padding: 8px 0;
+    padding: 2px 0 4px;
+    position: relative;
+  }
+  #sidebar.collapsed .folder-group-header .folder-group-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent-subtle);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    box-shadow: inset 0 0 0 1px var(--accent-border);
+    transition: transform 0.12s ease;
+  }
+  #sidebar.collapsed .folder-group-header:hover .folder-group-icon {
+    transform: scale(1.08);
+  }
+  #sidebar.collapsed .folder-group-header .folder-group-badge {
+    display: flex !important;
+    position: absolute;
+    top: -3px;
+    right: 5px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    font-size: 9px;
+    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--radius-full);
+    border: 1.5px solid var(--bg-surface);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    pointer-events: none;
+    line-height: 1;
+  }
+  #sidebar.collapsed .folder-group-header .folder-group-badge[data-count="0"] {
+    background: var(--text-light);
   }
   #sidebar.collapsed .folder-group-header .group-arrow,
   #sidebar.collapsed .folder-group-header .folder-group-name,
-  #sidebar.collapsed .folder-group-header .folder-group-badge,
   #sidebar.collapsed .folder-group-header .folder-group-actions,
-  #sidebar.collapsed .ungrouped-header {
+  #sidebar.collapsed .ungrouped-header .folder-group-name,
+  #sidebar.collapsed .ungrouped-header .folder-group-badge {
     display: none;
   }
   #sidebar.collapsed .folder-group-items {
     padding-left: 0;
+    margin-top: 4px;
+    border-top: 1px dashed var(--border-light);
+    padding-top: 3px;
+  }
+  #sidebar.collapsed .folder-group-items.collapsed {
+    display: none;
+  }
+  #sidebar.collapsed .folder-group-items .folder-item {
+    padding: 6px 0;
+    margin: 2px 2px;
+    border-radius: var(--radius-sm);
+  }
+  #sidebar.collapsed .folder-group-items .folder-item:hover {
+    background: var(--bg-subtle);
   }
   #sidebar.collapsed .group-empty-hint {
     display: none;
+  }
+  #sidebar.collapsed .ungrouped-section {
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1.5px dashed var(--border);
+  }
+  #sidebar.collapsed .ungrouped-header {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0 4px;
+  }
+  #sidebar.collapsed .ungrouped-header .folder-group-icon {
+    opacity: 0.6;
+    font-size: 13px;
   }
 
   /* 分组弹窗与预设样式 */
@@ -1355,21 +1434,23 @@
   #sidebar-tooltip {
     position: fixed;
     display: none;
-    background: rgba(35, 30, 26, 0.94);
-    backdrop-filter: blur(8px);
+    background: rgba(35, 30, 26, 0.96);
+    backdrop-filter: blur(10px);
     color: #fff;
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
     font-size: 12px;
     font-weight: 500;
-    white-space: nowrap;
+    white-space: normal;
+    min-width: 140px;
+    max-width: 260px;
     z-index: 9999;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.15);
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.1s ease;
-    line-height: 1.4;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.45;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
   #sidebar-tooltip.show {
     display: block;
@@ -1382,7 +1463,7 @@
     top: 50%;
     transform: translateY(-50%);
     border: 5px solid transparent;
-    border-right-color: rgba(35, 30, 26, 0.94);
+    border-right-color: rgba(35, 30, 26, 0.96);
   }
 
   /* HUD 居中浮层提示 */
@@ -2743,8 +2824,52 @@
         item.removeAttribute('title');
         if (item !== activeTooltipItem) {
           activeTooltipItem = item;
-          if (displayName && sidebarTooltip) {
-            sidebarTooltip.textContent = displayName;
+          if (sidebarTooltip) {
+            if (item.classList.contains('folder-group-header')) {
+              const groupId = item.dataset.groupId;
+              const group = folderGroups.find(g => g.id === groupId);
+              if (group) {
+                const groupFolders = savedFolders.filter(f => f.groupId === group.id);
+                sidebarTooltip.innerHTML = `
+                  <div style="font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.18);">
+                    <span style="font-size: 16px;">${group.icon}</span>
+                    <span style="color: #fff;">${escapeHtml(group.name)}</span>
+                    <span style="font-size: 11px; opacity: 0.75; font-weight: normal; margin-left: auto;">(${groupFolders.length} 个目录)</span>
+                  </div>
+                  <div style="margin-top: 5px; font-size: 11.5px; line-height: 1.5;">
+                    ${groupFolders.length > 0
+                      ? groupFolders.map(f => {
+                          const dName = f.customName || f.name;
+                          const isAct = currentView === 'library' && f.id === activeFolderId;
+                          return `<div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
+                            <span>${isAct ? '🎬' : '📁'}</span>
+                            <span style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isAct ? 'color: #F2C94C; font-weight: 600;' : 'color: rgba(255,255,255,0.9);'}">${escapeHtml(dName)}</span>
+                            ${f.count != null ? `<span style="font-size: 10px; opacity: 0.65; margin-left: auto;">${f.count}</span>` : ''}
+                          </div>`;
+                        }).join('')
+                      : `<div style="opacity: 0.65; font-size: 11px;">空分组（点击展开，拖入目录归类）</div>`
+                    }
+                  </div>
+                `;
+              } else {
+                sidebarTooltip.textContent = displayName;
+              }
+            } else {
+              // 目录项悬停提示
+              const folderId = item.getAttribute('data-folder-id');
+              const folder = savedFolders.find(f => f.id === folderId);
+              const grp = folder && folder.groupId ? folderGroups.find(g => g.id === folder.groupId) : null;
+              sidebarTooltip.innerHTML = `
+                <div style="font-weight: 600; font-size: 12.5px; color: #fff;">${escapeHtml(displayName)}</div>
+                <div style="font-size: 11px; opacity: 0.85; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                  ${grp
+                    ? `<span style="color: #F2C94C; font-weight: 500;">🏷️ 分组：${grp.icon} ${escapeHtml(grp.name)}</span>`
+                    : `<span style="opacity: 0.7;">📂 未分组</span>`
+                  }
+                  ${folder && folder.count != null ? `<span style="margin-left: 6px; opacity: 0.7;">· ${folder.count} 个视频</span>` : ''}
+                </div>
+              `;
+            }
             const rect = item.getBoundingClientRect();
             sidebarTooltip.style.left = `${rect.right + 8}px`;
             sidebarTooltip.style.top = `${rect.top + rect.height / 2}px`;
@@ -3159,6 +3284,7 @@
       const badge = document.createElement('span');
       badge.className = 'folder-group-badge';
       badge.textContent = groupFolders.length;
+      badge.dataset.count = groupFolders.length;
 
       const actions = document.createElement('div');
       actions.className = 'folder-group-actions';

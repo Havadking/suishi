@@ -153,3 +153,13 @@ test('分组折叠状态翻转与重名校验算法', () => {
   assert.equal(validateGroupName('日常', 'g1').valid, true, '编辑自身同名有效');
   assert.equal(validateGroupName('游戏').valid, true, '新名称合法');
 });
+
+// ---------- 6. 验证侧边栏收起时的分组卡片化与角标规则 ----------
+test('侧边栏折叠状态下分组具备卡片化边框与右上角目录数量角标', () => {
+  // 必须包含折叠态下分组容器的卡片化样式
+  assert.match(htmlContent, /#sidebar\.collapsed\s+\.folder-group-section\s*\{[\s\S]*?border:/, '折叠态分组应具备独立卡片边框');
+  // 必须包含折叠态下分组角标可见性
+  assert.match(htmlContent, /#sidebar\.collapsed\s+\.folder-group-header\s+\.folder-group-badge\s*\{[\s\S]*?display:\s*flex/, '折叠态下分组右上角角标应保持可见');
+  // 必须包含折叠态悬停提示富文本卡片逻辑
+  assert.match(htmlContent, /sidebarTooltip\.innerHTML\s*=/, '悬停应生成富文本卡片展示分组及目录');
+});
