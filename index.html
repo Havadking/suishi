@@ -1239,6 +1239,395 @@
   .is-spinning svg {
     animation: spin 0.8s linear infinite;
   }
+  /* ---------- 「⬇️ 下载」侧栏入口 ---------- */
+  .sidebar-dl-wrap {
+    padding: 0 8px 6px;
+  }
+  .dl-entry {
+    border: 1px solid transparent;
+  }
+  .dl-entry.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .dl-entry .folder-item-icon { position: relative; }
+  .dl-status-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-light);
+    border: 2px solid var(--bg-surface);
+    box-sizing: content-box;
+  }
+  .dl-status-dot.online { background: var(--secondary-accent); }
+  .dl-status-dot.busy { background: var(--accent); animation: dlPulse 1.2s ease-in-out infinite; }
+  @keyframes dlPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .dl-count-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border-radius: var(--radius-full);
+    padding: 1px 7px;
+    line-height: 1.5;
+  }
+  #sidebar.collapsed .dl-count-badge { display: none; }
+
+  /* ---------- 下载页 ---------- */
+  #download-view { display: none; max-width: 980px; margin: 0 auto; }
+  #main-wrap.view-download #download-view { display: block; }
+  #main-wrap.view-download #grid,
+  #main-wrap.view-download #empty-state,
+  #main-wrap.view-download #folder-bar { display: none !important; }
+  #main-wrap.view-download header > *:not(.header-left):not(.dl-header) { display: none !important; }
+  .dl-header {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  #main-wrap.view-download .dl-header { display: flex; }
+  .dl-header .dl-header-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+  }
+  .dl-conn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dl-conn .dl-status-dot { position: static; border: none; width: 8px; height: 8px; }
+  .dl-conn.online { background: #EEF4F0; color: var(--secondary-accent); }
+  .dl-conn.warn { background: var(--danger-subtle); color: var(--danger); }
+  .dl-header .spacer { flex: 1; }
+  .dl-header .icon-btn { width: 30px; height: 30px; }
+
+  .dl-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .dl-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .dl-input-row textarea {
+    flex: 1;
+    min-height: 62px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.15s;
+  }
+  .dl-input-row textarea:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+  .dl-input-row textarea::placeholder { color: var(--text-light); }
+  .dl-input-row .btn-accent { align-self: stretch; padding: 0 18px; white-space: nowrap; }
+  .dl-input-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-light);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .dl-input-hint .err { color: var(--danger); }
+
+  .dl-bind-tip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    background: #FFF8E8;
+    border: 1px solid #F3E2B8;
+    color: #8A6A1E;
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+    flex-wrap: wrap;
+  }
+  .dl-bind-tip code {
+    background: rgba(0,0,0,0.05);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .dl-bind-tip .spacer { flex: 1; }
+  .dl-bind-tip .btn-normal { padding: 5px 12px; font-size: 12.5px; }
+
+  /* 探测卡 */
+  .dl-probe {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .dl-probe-thumb {
+    width: 200px;
+    aspect-ratio: 16 / 9;
+    flex-shrink: 0;
+    background: #181614;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.4);
+    font-size: 28px;
+    position: relative;
+  }
+  .dl-probe-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dl-probe-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .dl-probe-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .dl-probe-title > span:first-child { flex: 1; word-break: break-all; }
+  .dl-probe-meta { font-size: 12.5px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .dl-probe-opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); }
+  .dl-probe-opts select { padding: 5px 10px; font-size: 12.5px; }
+  .dl-probe-flags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dl-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+  }
+  .dl-flag.ok { background: #EEF4F0; color: var(--secondary-accent); }
+  .dl-flag.warn { background: #FFF8E8; color: #8A6A1E; }
+  .dl-flag button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .dl-probe-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .dl-probe-actions .btn-normal { font-weight: 600; }
+
+  .site-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+  }
+  .site-badge.bilibili { background: #FDECF1; color: #D9527C; }
+  .site-badge.douyin { background: #EEEDF2; color: #3A3546; }
+  .site-badge.youtube { background: #FDECEC; color: #C93B3B; }
+  .site-badge.other { background: var(--bg-subtle); color: var(--text-muted); }
+
+  /* 任务列表 */
+  .dl-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 4px 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dl-section-title .n { color: var(--text-muted); font-weight: 500; letter-spacing: 0; text-transform: none; }
+  .dl-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+  .dl-job {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  .dl-job.failed { border-color: #F3C7C7; }
+  .dl-job-thumb {
+    width: 96px;
+    aspect-ratio: 16 / 9;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #181614;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.4);
+  }
+  .dl-job-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dl-job-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .dl-job-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dl-job-title > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+  .dl-job-sub { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dl-job-sub.err { color: var(--danger); white-space: normal; }
+  .dl-progress {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--bg-hover);
+    overflow: hidden;
+  }
+  .dl-progress i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #E07A5F, #F28E2B);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .dl-progress.indeterminate i {
+    width: 40% !important;
+    animation: dlSlide 1.1s ease-in-out infinite;
+  }
+  @keyframes dlSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+  .dl-job-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .dl-job-actions button {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .dl-job-actions .btn-accent { padding: 5px 12px; }
+  .dl-job-actions .btn-normal.danger:hover { color: var(--danger); border-color: var(--danger); }
+  .dl-empty {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 13px;
+    padding: 30px 0 40px;
+  }
+
+  /* 未连接引导卡 */
+  .dl-offline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 56px 24px;
+    background: var(--bg-surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+    max-width: 620px;
+    margin: 20px auto;
+  }
+  .dl-offline .empty-icon-wrap {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+  }
+  .dl-offline h3 { margin: 0; font-size: 17px; color: var(--text-main); }
+  .dl-offline .hint { font-size: 13px; line-height: 1.7; max-width: 500px; }
+  .dl-offline code {
+    background: var(--bg-subtle);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-main);
+  }
+  .dl-offline .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* 卡片来源徽标 */
+  .source-badge {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(28, 23, 20, 0.78);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .source-badge.bilibili { background: rgba(217, 82, 124, 0.9); }
+  .source-badge.douyin { background: rgba(58, 53, 70, 0.9); }
+  .source-badge.youtube { background: rgba(201, 59, 59, 0.9); }
+
+  #modal .modal-source-line {
+    margin-top: 6px;
+    font-size: 12px;
+    opacity: 0.75;
+  }
+  #modal .modal-source-line a { color: #F7D4C8; text-decoration: none; }
+  #modal .modal-source-line a:hover { text-decoration: underline; }
+
+  .dl-spin {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
 </style>
 </head>
 <body>
@@ -1272,6 +1661,17 @@
       </button>
     </div>
 
+    <div class="sidebar-dl-wrap">
+      <div id="dl-entry" class="folder-item dl-entry" data-tooltip="下载 · 拾光笺" title="从 B 站 / 抖音存视频到本地（经由本机拾光笺服务）">
+        <div class="folder-item-icon">⬇️<span id="dl-status-dot" class="dl-status-dot"></span></div>
+        <div class="folder-item-details">
+          <div class="folder-item-name">下载</div>
+          <div class="folder-item-sub" id="dl-entry-sub">未连接拾光笺</div>
+        </div>
+        <span id="dl-count-badge" class="dl-count-badge" style="display:none;">0</span>
+      </div>
+    </div>
+
     <div class="sidebar-nav-title">
       <span>已收藏目录</span>
       <span id="sidebar-folder-count">0</span>
@@ -1284,7 +1684,7 @@
     <div class="sidebar-footer">
       <div class="sidebar-footer-row">
         <span>随手拾起 · 片刻生活</span>
-        <span id="version-label">v1.2</span>
+        <span id="version-label">v1.3</span>
       </div>
       <button id="btn-clear-cache" class="btn-clear-cache" title="清理已缓存的封面海报，释放浏览器存储空间">
         🧹 清理缩略图缓存
@@ -1303,6 +1703,13 @@
             <line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
+      </div>
+
+      <div class="dl-header" id="dl-header">
+        <span class="dl-header-title">⬇️ 下载</span>
+        <span id="dl-conn" class="dl-conn"><span class="dl-status-dot"></span><span id="dl-conn-text">未连接</span></span>
+        <span class="spacer"></span>
+        <button id="btn-dl-settings-2" class="icon-btn" title="拾光笺连接设置">⚙</button>
       </div>
 
       <div class="search-wrap">
@@ -1357,6 +1764,41 @@
         <button id="btn-pick-empty" class="btn-accent" style="margin-top:4px;">立即选择文件夹</button>
       </div>
 
+      <!-- 「⬇️ 下载」页：经由本机拾光笺服务把 B 站 / 抖音视频存到本地 -->
+      <div id="download-view">
+        <div id="dl-offline" class="dl-offline" style="display:none;">
+          <div class="empty-icon-wrap">🔌</div>
+          <h3>拾光笺服务还没启动</h3>
+          <div class="hint" id="dl-offline-hint">
+            下载由同一台电脑上的「拾光笺 · Glean」完成，随拾只负责贴链接和看进度。<br>
+            双击拾光笺目录下的 <code>scripts/一键启动.vbs</code>，或在其目录运行 <code>uv run vsum ui</code>，然后回来点「重试连接」。
+          </div>
+          <div class="actions">
+            <button id="btn-dl-retry" class="btn-accent">↻ 重试连接</button>
+            <button id="btn-dl-settings" class="btn-normal">⚙ 连接设置</button>
+          </div>
+        </div>
+
+        <div id="dl-online" style="display:none;">
+          <div id="dl-bind-tip" class="dl-bind-tip" style="display:none;"></div>
+
+          <div class="dl-panel">
+            <div class="dl-input-row">
+              <textarea id="dl-url" rows="2" placeholder="贴一个 B 站 / 抖音视频链接，整段抖音分享口令也可以直接贴进来…"></textarea>
+              <button id="btn-dl-probe" class="btn-accent">🔍 探测</button>
+            </div>
+            <div class="dl-input-hint">
+              <span id="dl-input-msg">Enter 探测 · 粘贴后自动探测</span>
+              <span id="dl-dir-label"></span>
+            </div>
+          </div>
+
+          <div id="dl-probe-card" class="dl-panel" style="display:none;"></div>
+
+          <div id="dl-jobs"></div>
+        </div>
+      </div>
+
       <div id="grid"></div>
     </div>
   </div>
@@ -1365,6 +1807,8 @@
 <!-- 弹窗播放器 -->
 <div id="modal">
   <div class="modal-controls">
+    <button id="modal-source" style="display:none;" title="打开原链接">🔗 原链接</button>
+    <button id="modal-glean" style="display:none;" title="发送到拾光笺转写 / 查看转写 (G)">📝 拾光笺</button>
     <button id="modal-fav" title="星标收藏 (S)">⭐ 收藏</button>
     <button id="modal-delete" class="danger" title="删除当前视频 (Delete)">🗑️ 删除</button>
     <button id="modal-fullscreen" title="全屏 (F)">⛶ 全屏</button>
@@ -1375,6 +1819,7 @@
   <div id="modal-hud" class="player-hud"></div>
   <button class="nav-btn nav-next" id="nav-next">›</button>
   <div class="modal-info" id="modal-info"></div>
+  <div class="modal-info modal-source-line" id="modal-source-line" style="display:none;"></div>
 </div>
 
 <!-- 沉浸式竖屏刷视频模式 (Feed) -->
@@ -1382,6 +1827,7 @@
   <button id="feed-close" title="关闭 (Esc)">✕</button>
   <div class="feed-counter" id="feed-counter"></div>
   <div style="display:flex;gap:8px;align-items:center;">
+    <button id="feed-glean" style="display:none;" title="发送到拾光笺 (G)">📝</button>
     <button id="feed-fav" title="星标收藏 (S)">☆</button>
     <button id="feed-fullscreen" title="全屏 (F)">⛶</button>
     <button id="feed-mute" title="静音/取消静音">🔇</button>
@@ -1968,14 +2414,15 @@
 
     savedFolders.forEach((folder) => {
       const item = document.createElement('div');
-      item.className = 'folder-item' + (folder.id === activeFolderId ? ' active' : '');
+      const isActiveItem = currentView === 'library' && folder.id === activeFolderId;
+      item.className = 'folder-item' + (isActiveItem ? ' active' : '');
       const displayName = folder.customName || folder.name;
       item.setAttribute('data-tooltip', displayName);
       item.setAttribute('title', displayName);
 
       const icon = document.createElement('div');
       icon.className = 'folder-item-icon';
-      icon.textContent = folder.id === activeFolderId ? '🎬' : '📁';
+      icon.textContent = isActiveItem ? '🎬' : '📁';
 
       const details = document.createElement('div');
       details.className = 'folder-item-details';
@@ -2144,12 +2591,23 @@
 
   // ---------- 目录异步扫描管道 ----------
   async function* walk(dirHandle, path, recursive) {
+    // 同一趟遍历里顺手收下 *.suishi.json（拾光笺写的来源信息），按同名挂到视频上，不多读一次目录
+    const files = [];
+    const subdirs = [];
+    const sidecars = new Map();
     for await (const entry of dirHandle.values()) {
       if (entry.kind === 'file') {
-        if (isVideoFile(entry.name)) yield { handle: entry, path, parentHandle: dirHandle };
+        if (isVideoFile(entry.name)) files.push(entry);
+        else if (entry.name.toLowerCase().endsWith(SIDECAR_SUFFIX)) sidecars.set(entry.name.slice(0, -SIDECAR_SUFFIX.length), entry);
       } else if (entry.kind === 'directory' && recursive) {
-        yield* walk(entry, path ? `${path}/${entry.name}` : entry.name, recursive);
+        subdirs.push(entry);
       }
+    }
+    for (const fh of files) {
+      yield { handle: fh, path, parentHandle: dirHandle, sidecarHandle: sidecars.get(stemOf(fh.name)) || null };
+    }
+    for (const d of subdirs) {
+      yield* walk(d, path ? `${path}/${d.name}` : d.name, recursive);
     }
   }
 
@@ -2189,12 +2647,13 @@
     const recursive = recursiveChk.checked;
     let count = 0;
     try {
-      for await (const { handle: fh, path, parentHandle } of walk(cur.handle, '', recursive)) {
+      for await (const { handle: fh, path, parentHandle, sidecarHandle } of walk(cur.handle, '', recursive)) {
         let file;
         try { file = await fh.getFile(); } catch { continue; }
         allVideos.push({
           handle: fh,
           parentHandle,
+          sidecarHandle,
           name: fh.name,
           path,
           ext: extOf(fh.name),
@@ -2246,13 +2705,17 @@
     let addedCount = 0;
 
     try {
-      for await (const { handle: fh, path, parentHandle } of walk(cur.handle, '', recursive)) {
+      for await (const { handle: fh, path, parentHandle, sidecarHandle } of walk(cur.handle, '', recursive)) {
         let file;
         try { file = await fh.getFile(); } catch { continue; }
         const key = `${path ? path + '/' : ''}${fh.name}`;
         const existing = oldMap.get(key);
         if (existing) {
           existing.parentHandle = parentHandle;
+          if (existing.sidecarHandle !== sidecarHandle) {
+            existing.sidecarHandle = sidecarHandle;
+            delete existing._sidecarPromise;
+          }
           if (existing.mtime === file.lastModified && existing.size === file.size) {
             existing.handle = fh;
             scannedVideos.push(existing);
@@ -2260,6 +2723,7 @@
             scannedVideos.push({
               handle: fh,
               parentHandle,
+              sidecarHandle,
               name: fh.name,
               path,
               ext: extOf(fh.name),
@@ -2273,6 +2737,7 @@
           scannedVideos.push({
             handle: fh,
             parentHandle,
+            sidecarHandle,
             name: fh.name,
             path,
             ext: extOf(fh.name),
@@ -2383,6 +2848,16 @@
     } catch (err) {
       alert(`删除失败: ${err.message || err}`);
       return;
+    }
+
+    // 级联删除拾光笺写的来源 sidecar（.suishi.json）
+    if (v.sidecarHandle) {
+      try {
+        const parent = v.parentHandle || cur.handle;
+        await parent.removeEntry(v.sidecarHandle.name);
+      } catch (e) {
+        console.warn('sidecar 未能删除:', e);
+      }
     }
 
     // 级联从内存列表切除
@@ -2640,6 +3115,15 @@
     durBadge.style.display = 'none';
     thumbWrap.appendChild(durBadge);
 
+    // 拾光笺存档的视频：来源徽标（具体站点等进入视口时读 sidecar 再补）
+    let sourceBadge = null;
+    if (v.sidecarHandle) {
+      sourceBadge = document.createElement('div');
+      sourceBadge.className = 'source-badge other';
+      sourceBadge.textContent = '⬇ 存档';
+      thumbWrap.appendChild(sourceBadge);
+    }
+
     // 星标收藏按钮
     const favBtn = document.createElement('button');
     favBtn.type = 'button';
@@ -2705,6 +3189,8 @@
     card._placeholder = placeholder;
     card._durBadge = durBadge;
     card._video = v;
+    card._nameEl = nameEl;
+    card._sourceBadge = sourceBadge;
 
     card.addEventListener('click', () => {
       if (!isPlayable) {
@@ -2723,6 +3209,7 @@
       if (entry.isIntersecting) {
         io.unobserve(entry.target);
         generateThumbnail(entry.target);
+        if (entry.target._sourceBadge) decorateCardSource(entry.target);
       }
     }
   }
@@ -2994,6 +3481,7 @@
       feedFavBtn.textContent = isFav ? '★' : '☆';
       feedFavBtn.classList.toggle('is-active', isFav);
     }
+    updateFeedSource(curSlide ? curSlide._srcVideo : null);
     for (let i = 0; i < slides.length; i++) {
       const slide = slides[i];
       if (Math.abs(i - idx) <= 1) {
@@ -3109,6 +3597,7 @@
     modalVideo.volume = getSavedVolume();
     modalVideo.muted = getSavedMuted();
     modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
+    updateModalSource(v);
     const isFav = isFavorited(v);
     if (modalFavBtn) {
       modalFavBtn.textContent = isFav ? '★ 已收藏' : '⭐ 收藏';
@@ -3251,6 +3740,9 @@
           const spd = stepPlaybackSpeed(curVideo, 1);
           showFeedHud(`⚡ ${spd}x`);
         }
+      } else if (e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        gleanActionForCurrent();
       } else if (e.key.toLowerCase() === 'f') {
         e.preventDefault();
         toggleFullscreen(feedEl);
@@ -3313,6 +3805,9 @@
         e.preventDefault();
         const spd = stepPlaybackSpeed(modalVideo, 1);
         showModalHud(`⚡ ${spd}x`);
+      } else if (e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        gleanActionForCurrent();
       } else if (e.key.toLowerCase() === 'f') {
         e.preventDefault();
         toggleFullscreen(modal);
@@ -3332,6 +3827,688 @@
       rescanActiveFolder();
     }
   });
+
+
+  // ---------- 「⬇️ 下载」：经由本机拾光笺 (Glean) 存视频 ----------
+  // 随拾自身不联网：所有下载都由同一台机器上的拾光笺服务完成，这里只是贴链接、看进度、
+  // 以及读 mp4 旁边的 .suishi.json 来源信息。连不上拾光笺时本页降级为引导卡，其余功能不受影响。
+  const GLEAN_DEFAULT_BASE = 'http://127.0.0.1:7860';
+  const SIDECAR_SUFFIX = '.suishi.json';
+  const dlEntry = $('dl-entry');
+  const dlStatusDot = $('dl-status-dot');
+  const dlEntrySub = $('dl-entry-sub');
+  const dlCountBadge = $('dl-count-badge');
+  const mainWrap = $('main-wrap');
+  const dlConn = $('dl-conn');
+  const dlConnText = $('dl-conn-text');
+  const dlOffline = $('dl-offline');
+  const dlOnline = $('dl-online');
+  const dlBindTip = $('dl-bind-tip');
+  const dlUrlInput = $('dl-url');
+  const btnDlProbe = $('btn-dl-probe');
+  const dlInputMsg = $('dl-input-msg');
+  const dlDirLabel = $('dl-dir-label');
+  const dlProbeCard = $('dl-probe-card');
+  const dlJobsEl = $('dl-jobs');
+  const modalGleanBtn = $('modal-glean');
+  const modalSourceBtn = $('modal-source');
+  const modalSourceLine = $('modal-source-line');
+  const feedGleanBtn = $('feed-glean');
+
+  let gleanBase = (localStorage.getItem('suishi_glean_base') || GLEAN_DEFAULT_BASE).replace(/\/+$/, '');
+  let gleanOnline = false;
+  let gleanConfig = null;        // GET /api/downloads/config 的结果
+  let gleanEvents = null;        // EventSource
+  let gleanLastSeq = 0;
+  let gleanRetryTimer = null;
+  let gleanConnecting = false;
+  let currentView = 'library';   // library | download
+  let downloadFolderId = null;   // 与拾光笺 video_dir 对应的抽屉目录 id
+  let downloadFolderDirty = false;
+  const dlJobs = new Map();      // id -> 任务快照（以拾光笺为准，随拾不另存）
+  let dlProbe = null;            // 当前探测卡的数据
+  let dlProbing = false;
+
+  function gleanUrl(path) { return gleanBase + path; }
+
+  async function gleanFetch(path, { method = 'GET', body = null, timeout = 8000 } = {}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(gleanUrl(path), {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: ctrl.signal,
+      });
+      let data = null;
+      try { data = await res.json(); } catch {}
+      if (!res.ok) {
+        const msg = (data && (data.detail || data.error)) || `HTTP ${res.status}`;
+        const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function siteOf(extractor) {
+    const k = String(extractor || '').toLowerCase();
+    if (k.includes('bilibili')) return { cls: 'bilibili', label: 'B站', icon: '🅱' };
+    if (k.includes('douyin') || k.includes('tiktok')) return { cls: 'douyin', label: '抖音', icon: '🎵' };
+    if (k.includes('youtube')) return { cls: 'youtube', label: 'YouTube', icon: '▶' };
+    return { cls: 'other', label: extractor || '来源', icon: '🌐' };
+  }
+  function siteBadgeHtml(extractor) {
+    const s = siteOf(extractor);
+    return `<span class="site-badge ${s.cls}">${s.icon} ${escapeHtml(s.label)}</span>`;
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function thumbUrl(url) {
+    return url ? gleanUrl(`/api/downloads/thumb?url=${encodeURIComponent(url)}`) : '';
+  }
+  function fmtEta(sec) {
+    if (sec == null || !isFinite(sec)) return '';
+    return fmtDuration(Math.max(0, sec));
+  }
+  function basenameOf(p) {
+    const s = String(p || '');
+    return s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1);
+  }
+  function stemOf(name) {
+    const i = name.lastIndexOf('.');
+    return i > 0 ? name.slice(0, i) : name;
+  }
+  function transientStatus(msg, ms = 3500) {
+    setStatus(msg);
+    setTimeout(() => { if (statusBar.textContent === msg) setStatus(''); }, ms);
+  }
+
+  // ----- 视图切换 -----
+  function showView(view) {
+    if (view === currentView) {
+      if (view === 'download') gleanConnect();
+      return;
+    }
+    const leavingDownload = currentView === 'download';
+    currentView = view;
+    mainWrap.classList.toggle('view-download', view === 'download');
+    dlEntry.classList.toggle('active', view === 'download');
+    if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+    renderSidebar();
+    if (view === 'download') {
+      gleanConnect();
+      setTimeout(() => { if (gleanOnline) dlUrlInput.focus(); }, 50);
+    } else if (leavingDownload && downloadFolderDirty && activeFolderId && activeFolderId === downloadFolderId) {
+      downloadFolderDirty = false;
+      rescanActiveFolder();
+    }
+  }
+
+  // ----- 连接拾光笺 -----
+  function scheduleGleanRetry() {
+    clearTimeout(gleanRetryTimer);
+    gleanRetryTimer = setTimeout(gleanConnect, currentView === 'download' ? 10000 : 30000);
+  }
+
+  async function gleanConnect() {
+    if (gleanConnecting) return;
+    gleanConnecting = true;
+    try {
+      const cfg = await gleanFetch('/api/downloads/config', { timeout: 3000 });
+      gleanConfig = cfg;
+      const wasOnline = gleanOnline;
+      gleanOnline = true;
+      if (!wasOnline || !gleanEvents) {
+        const list = await gleanFetch('/api/downloads?limit=200');
+        dlJobs.clear();
+        (list.jobs || []).forEach(j => dlJobs.set(j.id, j));
+        openGleanEvents();
+      }
+    } catch (err) {
+      gleanOnline = false;
+      gleanConfig = null;
+      closeGleanEvents();
+      scheduleGleanRetry();
+    } finally {
+      gleanConnecting = false;
+    }
+    updateConnUI();
+    renderDlJobs();
+  }
+
+  function openGleanEvents() {
+    closeGleanEvents();
+    try {
+      gleanEvents = new EventSource(gleanUrl(`/api/downloads/events?after=${gleanLastSeq}`));
+    } catch (e) {
+      console.error('无法订阅拾光笺事件流:', e);
+      return;
+    }
+    gleanEvents.addEventListener('job', (ev) => {
+      let data;
+      try { data = JSON.parse(ev.data); } catch { return; }
+      if (!data || !data.job) return;
+      gleanLastSeq = Math.max(gleanLastSeq, data.seq || 0);
+      const prev = dlJobs.get(data.job.id);
+      dlJobs.set(data.job.id, data.job);
+      if (data.job.status === 'done' && (!prev || prev.status !== 'done')) onDownloadDone(data.job);
+      if (data.job.status === 'failed' && (!prev || prev.status !== 'failed')) {
+        transientStatus(`⬇️ 下载失败：${data.job.title || ''} — ${data.job.error || ''}`, 6000);
+      }
+      updateConnUI();
+      renderDlJobs();
+      if (dlProbe && dlProbe.video_id === data.job.video_id) renderProbeCard(dlProbe);
+    });
+    gleanEvents.onerror = () => {
+      // 服务掉了浏览器只会默默重连，这里主动探一次活：连不上就标成离线、改走定时重试
+      if (gleanEvents && gleanEvents.readyState === EventSource.CLOSED) {
+        gleanOnline = false;
+        closeGleanEvents();
+        updateConnUI();
+        scheduleGleanRetry();
+      } else {
+        gleanConnect();
+      }
+    };
+  }
+
+  function closeGleanEvents() {
+    if (gleanEvents) {
+      try { gleanEvents.close(); } catch {}
+      gleanEvents = null;
+    }
+  }
+
+  function activeDlJobs() {
+    return Array.from(dlJobs.values()).filter(j => j.status === 'queued' || j.status === 'downloading' || j.status === 'merging');
+  }
+
+  function updateConnUI() {
+    const active = activeDlJobs().length;
+    const enabled = gleanOnline && gleanConfig && gleanConfig.enabled;
+    dlStatusDot.className = 'dl-status-dot' + (gleanOnline ? (active ? ' busy' : ' online') : '');
+    dlCountBadge.style.display = active ? '' : 'none';
+    dlCountBadge.textContent = active;
+    if (!gleanOnline) dlEntrySub.textContent = '未连接拾光笺';
+    else if (!enabled) dlEntrySub.textContent = '拾光笺未开启存视频';
+    else dlEntrySub.textContent = active ? `${active} 个任务进行中` : `存到「${gleanConfig.dir_name}」`;
+
+    if (dlConn) {
+      dlConn.className = 'dl-conn' + (gleanOnline ? (enabled && gleanConfig.dir_ok ? ' online' : ' warn') : '');
+      if (!gleanOnline) dlConnText.textContent = `未连接 ${gleanBase}`;
+      else if (!enabled) dlConnText.textContent = '拾光笺未配置 download.video_dir';
+      else if (!gleanConfig.dir_ok) dlConnText.textContent = `目录不可写：${gleanConfig.video_dir}`;
+      else if (!gleanConfig.ffmpeg) dlConnText.textContent = '拾光笺所在机器缺少 ffmpeg，B 站高清无法合流';
+      else dlConnText.textContent = `已连接拾光笺 v${gleanConfig.version || ''} · 下载到「${gleanConfig.dir_name}」`;
+    }
+
+    dlOffline.style.display = gleanOnline && enabled ? 'none' : 'flex';
+    dlOnline.style.display = gleanOnline && enabled ? '' : 'none';
+    if (gleanOnline && !enabled) {
+      $('dl-offline-hint').innerHTML = '拾光笺已连上，但还没开启「存视频」。<br>在拾光笺的 <code>config.yaml</code> 里给 <code>download.video_dir</code> 填一个目录（例如 <code>E:/download/随拾下载</code>），并把随拾的地址加进 <code>web.cors_origins</code>，重启后回来点「重试连接」。';
+      dlOffline.querySelector('h3').textContent = '拾光笺未开启存视频功能';
+    } else if (!gleanOnline) {
+      $('dl-offline-hint').innerHTML = `下载由同一台电脑上的「拾光笺 · Glean」完成，随拾只负责贴链接和看进度。<br>双击拾光笺目录下的 <code>scripts/一键启动.vbs</code>，或在其目录运行 <code>uv run vsum ui</code>，然后回来点「重试连接」。<br><span style="color:var(--text-light)">当前地址 <code>${escapeHtml(gleanBase)}</code>，若拾光笺跑在别的端口请改「连接设置」；若能打开拾光笺页面但这里连不上，检查其 <code>web.cors_origins</code> 是否包含 <code>${escapeHtml(location.origin)}</code>。</span>`;
+      dlOffline.querySelector('h3').textContent = '拾光笺服务还没启动';
+    }
+    if (enabled) {
+      dlDirLabel.textContent = `📂 ${gleanConfig.video_dir}`;
+      dlDirLabel.title = gleanConfig.video_dir;
+    }
+    updateBindTip();
+  }
+
+  function promptGleanBase() {
+    const next = prompt('拾光笺服务地址（默认 http://127.0.0.1:7860）：', gleanBase);
+    if (next === null) return;
+    const trimmed = next.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(trimmed)) {
+      alert('只接受本机地址（localhost / 127.0.0.1），随拾不会连接外部服务。');
+      return;
+    }
+    gleanBase = trimmed;
+    localStorage.setItem('suishi_glean_base', gleanBase);
+    gleanOnline = false;
+    gleanLastSeq = 0;
+    closeGleanEvents();
+    gleanConnect();
+  }
+
+  // ----- 下载目录与抽屉的绑定 -----
+  function findFolderByName(name) {
+    return name ? savedFolders.find(f => f.name === name) : null;
+  }
+
+  function updateBindTip() {
+    if (!gleanOnline || !gleanConfig || !gleanConfig.enabled) { dlBindTip.style.display = 'none'; return; }
+    const bound = downloadFolderId && savedFolders.find(f => f.id === downloadFolderId);
+    if (bound) { dlBindTip.style.display = 'none'; return; }
+    const sameName = findFolderByName(gleanConfig.dir_name);
+    dlBindTip.style.display = 'flex';
+    dlBindTip.innerHTML = sameName
+      ? `📁 抽屉里已有「${escapeHtml(sameName.customName || sameName.name)}」，看起来就是拾光笺的下载目录 <code>${escapeHtml(gleanConfig.video_dir)}</code>。<span class="spacer"></span><button class="btn-normal" id="btn-dl-bind-existing">就是它，绑定</button><button class="btn-normal" id="btn-dl-bind-pick">选别的目录</button>`
+      : `📁 下载目录 <code>${escapeHtml(gleanConfig.video_dir)}</code> 还没加入抽屉，加进来后下载完成的视频会自动出现在随拾里。<span class="spacer"></span><button class="btn-normal" id="btn-dl-bind-pick">添加到抽屉</button>`;
+    const ex = $('btn-dl-bind-existing');
+    if (ex) ex.addEventListener('click', async () => {
+      downloadFolderId = sameName.id;
+      await idbSet('downloadFolderId', downloadFolderId);
+      updateBindTip();
+      transientStatus(`已把「${sameName.customName || sameName.name}」绑定为下载目录`);
+    });
+    $('btn-dl-bind-pick').addEventListener('click', bindDownloadFolder);
+  }
+
+  async function bindDownloadFolder() {
+    if (!window.showDirectoryPicker) { alert('当前浏览器不支持 File System Access API。'); return false; }
+    let handle;
+    try {
+      handle = await window.showDirectoryPicker({ mode: 'read' });
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error(err);
+      return false;
+    }
+    if (gleanConfig && gleanConfig.dir_name && handle.name !== gleanConfig.dir_name) {
+      const ok = confirm(`你选的是「${handle.name}」，而拾光笺配置的下载目录叫「${gleanConfig.dir_name}」。\n仍然把「${handle.name}」当作下载目录吗？`);
+      if (!ok) return false;
+    }
+    let folder = savedFolders.find(f => f.name === handle.name);
+    if (folder) {
+      folder.handle = handle;
+    } else {
+      folder = { id: 'f_' + Date.now(), name: handle.name, handle, addedAt: Date.now() };
+      savedFolders.unshift(folder);
+    }
+    downloadFolderId = folder.id;
+    await saveFolderState();
+    await idbSet('downloadFolderId', downloadFolderId);
+    renderSidebar();
+    updateBindTip();
+    transientStatus(`已把「${folder.customName || folder.name}」绑定为下载目录`);
+    return true;
+  }
+
+  function onDownloadDone(job) {
+    transientStatus(`⬇️ 已存好：${job.title || basenameOf(job.file_path)}`, 5000);
+    if (!downloadFolderId) return;
+    if (activeFolderId === downloadFolderId && currentView === 'library') {
+      rescanActiveFolder();
+    } else if (activeFolderId === downloadFolderId) {
+      downloadFolderDirty = true;
+    }
+  }
+
+  // ----- 探测与下载 -----
+  async function probeUrl(text) {
+    const raw = (text == null ? dlUrlInput.value : text).trim();
+    if (!raw || dlProbing || !gleanOnline) return;
+    dlProbing = true;
+    btnDlProbe.disabled = true;
+    btnDlProbe.innerHTML = '<span class="dl-spin"></span> 探测中';
+    dlInputMsg.textContent = '正在向站点询问视频信息…';
+    dlInputMsg.className = '';
+    try {
+      const p = await gleanFetch('/api/downloads/probe', { method: 'POST', body: { url: raw }, timeout: 60000 });
+      dlProbe = p;
+      renderProbeCard(p);
+      dlInputMsg.textContent = p.kind === 'list' ? '这是合集 / 空间链接' : '探测完成，选好清晰度就可以下载';
+    } catch (err) {
+      dlProbe = null;
+      dlProbeCard.style.display = 'none';
+      dlInputMsg.textContent = `探测失败：${err.message || err}`;
+      dlInputMsg.className = 'err';
+      if (err.name === 'AbortError' || /Failed to fetch/i.test(String(err.message))) gleanConnect();
+    } finally {
+      dlProbing = false;
+      btnDlProbe.disabled = false;
+      btnDlProbe.textContent = '🔍 探测';
+    }
+  }
+
+  function renderProbeCard(p) {
+    if (!p) { dlProbeCard.style.display = 'none'; return; }
+    dlProbeCard.style.display = '';
+    if (p.kind === 'list') {
+      dlProbeCard.innerHTML = `
+        <div class="dl-probe">
+          <div class="dl-probe-thumb">📚</div>
+          <div class="dl-probe-body">
+            <div class="dl-probe-title"><span>${escapeHtml(p.title || '合集 / 空间')}</span></div>
+            <div class="dl-probe-meta">这是一个${p.list_kind === 'space' ? ' UP 主空间' : '合集 / 播放列表'}${p.total ? `，共 ${p.total} 条` : ''}。随拾的下载页目前只接单个视频。</div>
+            <div class="dl-probe-actions">
+              <button class="btn-normal" id="btn-dl-open-glean-list">到拾光笺里批量处理 ↗</button>
+            </div>
+          </div>
+        </div>`;
+      $('btn-dl-open-glean-list').addEventListener('click', () => window.open(gleanUrl('/'), '_blank'));
+      return;
+    }
+    const live = p.downloading || Array.from(dlJobs.values()).find(j => j.video_id === p.video_id && (j.status === 'queued' || j.status === 'downloading' || j.status === 'merging'));
+    const doneJob = Array.from(dlJobs.values()).find(j => j.video_id === p.video_id && j.status === 'done' && j.file_exists);
+    const already = p.already_downloaded || !!doneJob;
+    const defaultQ = (gleanConfig && gleanConfig.quality) || '1080';
+    const heights = p.heights || [];
+    const qualities = ['best', '1080', '720', '480'].map(q => {
+      const label = q === 'best' ? `最高画质${p.max_height ? ` (${p.max_height}p)` : ''}` : `${q}p`;
+      const available = q === 'best' || !heights.length || heights.some(h => h <= Number(q));
+      return `<option value="${q}" ${q === defaultQ ? 'selected' : ''} ${available ? '' : 'disabled'}>${label}${available ? '' : ' · 无此档'}</option>`;
+    }).join('');
+    const flags = [];
+    if (live) flags.push(`<span class="dl-flag warn">⏳ 正在下载中 ${Math.round((live.progress || 0) * 100)}%</span>`);
+    else if (already) flags.push(`<span class="dl-flag ok">✓ 已下载过 <button data-act="play">▶ 播放</button></span>`);
+    if (p.in_library) flags.push(`<span class="dl-flag ok">📖 拾光笺里已有转写 <button data-act="open-glean">查看</button></span>`);
+    dlProbeCard.innerHTML = `
+      <div class="dl-probe">
+        <div class="dl-probe-thumb">${p.thumbnail ? `<img alt="" src="${escapeHtml(thumbUrl(p.thumbnail))}" onerror="this.remove()">` : '🎬'}</div>
+        <div class="dl-probe-body">
+          <div class="dl-probe-title"><span>${escapeHtml(p.title)}</span>${siteBadgeHtml(p.extractor)}</div>
+          <div class="dl-probe-meta">
+            ${p.uploader ? `<span>👤 ${escapeHtml(p.uploader)}</span>` : ''}
+            ${p.duration_sec ? `<span>⏱ ${fmtDuration(p.duration_sec)}</span>` : ''}
+            ${p.upload_date ? `<span>📅 ${escapeHtml(p.upload_date)}</span>` : ''}
+          </div>
+          ${flags.length ? `<div class="dl-probe-flags">${flags.join('')}</div>` : ''}
+          <div class="dl-probe-opts">
+            <label>清晰度上限 <select id="dl-quality">${qualities}</select></label>
+            <span style="color:var(--text-light);font-size:12px;">${gleanConfig && gleanConfig.prefer_h264 ? '优先 H.264，浏览器可直接播放' : '按拾光笺配置选择编码'}</span>
+          </div>
+          <div class="dl-probe-actions">
+            <button class="btn-accent" data-act="download" ${live ? 'disabled' : ''}>⬇️ ${already ? '重新下载' : '下载'}</button>
+            <button class="btn-normal" data-act="download-glean" ${live ? 'disabled' : ''}>⬇️ 下载并发送拾光笺</button>
+            <button class="btn-normal" data-act="source">🔗 原链接</button>
+          </div>
+        </div>
+      </div>`;
+    dlProbeCard.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = btn.dataset.act;
+        const quality = ($('dl-quality') || {}).value || defaultQ;
+        if (act === 'download') startDownload(p.url, quality, null, already);
+        else if (act === 'download-glean') startDownload(p.url, quality, '', already);
+        else if (act === 'source') window.open(p.url, '_blank', 'noopener');
+        else if (act === 'play' && doneJob) playDownloadedJob(doneJob);
+        else if (act === 'play' && p.download) playDownloadedJob(p.download);
+        else if (act === 'open-glean') window.open(gleanUrl(`/video/${encodeURIComponent(p.video_id)}`), '_blank');
+      });
+    });
+  }
+
+  async function startDownload(url, quality, thenSummarize, force) {
+    try {
+      const r = await gleanFetch('/api/downloads', {
+        method: 'POST',
+        body: { url, quality, force: !!force, then_summarize: thenSummarize },
+        timeout: 15000,
+      });
+      dlJobs.set(r.job.id, r.job);
+      updateConnUI();
+      renderDlJobs();
+      if (r.duplicate) {
+        transientStatus(r.job.status === 'done' ? '这条视频已经存过了，没有重复下载' : '这条视频已经在队列里了');
+      } else {
+        transientStatus(thenSummarize !== null && thenSummarize !== undefined ? '已加入下载队列，下完会自动送去拾光笺转写' : '已加入下载队列');
+        dlUrlInput.value = '';
+        dlProbe = null;
+        dlProbeCard.style.display = 'none';
+        dlInputMsg.textContent = 'Enter 探测 · 粘贴后自动探测';
+        dlInputMsg.className = '';
+        dlUrlInput.focus();
+      }
+    } catch (err) {
+      alert(`下载请求失败：${err.message || err}`);
+    }
+  }
+
+  // ----- 任务列表 -----
+  function renderDlJobs() {
+    if (currentView !== 'download' || !gleanOnline) return;
+    const jobs = Array.from(dlJobs.values());
+    const active = jobs.filter(j => j.status === 'queued' || j.status === 'downloading' || j.status === 'merging')
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+    const done = jobs.filter(j => j.status === 'done').sort((a, b) => String(b.finished_at || b.created_at).localeCompare(String(a.finished_at || a.created_at)));
+    const failed = jobs.filter(j => j.status === 'failed' || j.status === 'cancelled').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+
+    dlJobsEl.innerHTML = '';
+    if (!jobs.length) {
+      dlJobsEl.innerHTML = '<div class="dl-empty">还没有下载过任何视频。贴一个链接开始吧。</div>';
+      return;
+    }
+    const section = (title, items, cls) => {
+      if (!items.length) return;
+      const t = document.createElement('div');
+      t.className = 'dl-section-title';
+      t.innerHTML = `${title} <span class="n">${items.length}</span>`;
+      dlJobsEl.appendChild(t);
+      const list = document.createElement('div');
+      list.className = 'dl-list';
+      items.forEach(j => list.appendChild(jobRow(j, cls)));
+      dlJobsEl.appendChild(list);
+    };
+    section('进行中', active, 'active');
+    section('已完成', done, 'done');
+    section('失败 / 已取消', failed, 'failed');
+  }
+
+  function jobRow(j, cls) {
+    const row = document.createElement('div');
+    row.className = `dl-job ${cls}`;
+    const pct = Math.round((j.progress || 0) * 100);
+    let sub = '';
+    if (j.status === 'queued') sub = '排队中…';
+    else if (j.status === 'downloading') sub = j.note || `${pct}%${j.speed ? ` · ${j.speed}` : ''}${j.eta_sec != null ? ` · 剩余 ${fmtEta(j.eta_sec)}` : ''}`;
+    else if (j.status === 'merging') sub = '正在合流音视频…';
+    else if (j.status === 'done') sub = `${j.uploader ? j.uploader + ' · ' : ''}${j.finished_at ? fmtDate(Date.parse(j.finished_at)) : ''}${j.file_exists === false ? ' · ⚠ 文件已不在' : ''}`;
+    else if (j.status === 'failed') sub = j.error || '失败';
+    else sub = '已取消';
+    const indeterminate = j.status === 'queued' || j.status === 'merging' || (j.status === 'downloading' && !j.progress);
+    row.innerHTML = `
+      <div class="dl-job-thumb">${j.thumbnail ? `<img alt="" src="${escapeHtml(thumbUrl(j.thumbnail))}" onerror="this.remove()">` : '🎬'}</div>
+      <div class="dl-job-body">
+        <div class="dl-job-title"><span title="${escapeHtml(j.title)}">${escapeHtml(j.title)}</span>${siteBadgeHtml(j.extractor)}</div>
+        ${cls === 'active' ? `<div class="dl-progress ${indeterminate ? 'indeterminate' : ''}"><i style="width:${pct}%"></i></div>` : ''}
+        <div class="dl-job-sub ${j.status === 'failed' ? 'err' : ''}">${escapeHtml(sub)}</div>
+      </div>
+      <div class="dl-job-actions"></div>`;
+    const actions = row.querySelector('.dl-job-actions');
+    const mk = (label, title, className, fn) => {
+      const b = document.createElement('button');
+      b.className = className;
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener('click', fn);
+      actions.appendChild(b);
+      return b;
+    };
+    if (j.status === 'done') {
+      if (j.file_exists !== false) mk('▶ 播放', '在随拾里打开这条视频', 'btn-accent', () => playDownloadedJob(j));
+      mk('📝 拾光笺', '发送到拾光笺转写 / 查看已有转写', 'btn-normal', (e) => sendToGlean({ url: j.url, video_id: j.video_id, title: j.title }, e.currentTarget));
+      mk('📂', '在资源管理器中定位文件', 'btn-normal', () => gleanFetch(`/api/downloads/${j.id}/open`, { method: 'POST' }).catch(err => alert(err.message)));
+      mk('🔗', '打开原链接', 'btn-normal', () => window.open(j.url, '_blank', 'noopener'));
+      mk('✕', '从列表移除（不删文件）', 'btn-normal danger', () => removeDlJob(j));
+    } else if (j.status === 'queued') {
+      mk('✕ 取消', '取消排队', 'btn-normal danger', () => removeDlJob(j));
+    } else if (j.status === 'failed' || j.status === 'cancelled') {
+      mk('↻ 重试', '重新下载', 'btn-accent', async () => { await removeDlJob(j, true); startDownload(j.url, j.quality || (gleanConfig && gleanConfig.quality) || '1080', null, true); });
+      mk('🔗', '打开原链接', 'btn-normal', () => window.open(j.url, '_blank', 'noopener'));
+      mk('✕', '移除记录', 'btn-normal danger', () => removeDlJob(j));
+    }
+    return row;
+  }
+
+  async function removeDlJob(j, silent) {
+    try {
+      await gleanFetch(`/api/downloads/${j.id}`, { method: 'DELETE' });
+      dlJobs.delete(j.id);
+      updateConnUI();
+      renderDlJobs();
+    } catch (err) {
+      if (!silent) alert(`操作失败：${err.message || err}`);
+    }
+  }
+
+  async function playDownloadedJob(j) {
+    if (!downloadFolderId || !savedFolders.find(f => f.id === downloadFolderId)) {
+      const ok = await bindDownloadFolder();
+      if (!ok) return;
+    }
+    const targetName = basenameOf(j.file_path);
+    showView('library');
+    if (activeFolderId !== downloadFolderId) {
+      await switchFolder(downloadFolderId);
+    } else if (downloadFolderDirty) {
+      downloadFolderDirty = false;
+      await rescanActiveFolder();
+    }
+    let idx = filtered.findIndex(v => v.name === targetName);
+    if (idx < 0 && allVideos.some(v => v.name === targetName)) {
+      // 被搜索词或子目录筛选挡住了，先清掉筛选
+      searchInput.value = '';
+      activeFolder = null;
+      render();
+      idx = filtered.findIndex(v => v.name === targetName);
+    }
+    if (idx < 0) {
+      await rescanActiveFolder();
+      idx = filtered.findIndex(v => v.name === targetName);
+    }
+    if (idx >= 0) openModal(idx);
+    else transientStatus(`在抽屉里没找到「${targetName}」，请确认绑定的目录就是拾光笺的下载目录`, 6000);
+  }
+
+  // ----- 发送到拾光笺 / 在拾光笺中查看 -----
+  async function sendToGlean(meta, btn) {
+    if (!meta || !meta.url) return;
+    const original = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      try {
+        await gleanFetch(`/api/videos/${encodeURIComponent(meta.video_id)}`, { timeout: 5000 });
+        window.open(gleanUrl(`/video/${encodeURIComponent(meta.video_id)}`), '_blank');
+        if (btn) btn.textContent = '📖 拾光笺';
+        return;
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
+      const r = await gleanFetch('/api/jobs', { method: 'POST', body: { url: meta.url }, timeout: 15000 });
+      const msg = r.duplicate ? '拾光笺里已经在处理这条视频了' : `已发送到拾光笺排队转写：${meta.title || ''}`;
+      if (modal.classList.contains('show')) showModalHud('📝 ' + msg);
+      else if (feedEl.classList.contains('show')) showFeedHud('📝 ' + msg);
+      else transientStatus('📝 ' + msg, 5000);
+      if (btn) btn.textContent = '📖 拾光笺';
+    } catch (err) {
+      const msg = /Failed to fetch|AbortError/i.test(String(err.message || err.name)) ? '连不上拾光笺，请先启动它' : (err.message || err);
+      if (modal.classList.contains('show')) showModalHud('⚠ ' + msg);
+      else if (feedEl.classList.contains('show')) showFeedHud('⚠ ' + msg);
+      else alert(msg);
+      if (btn) btn.textContent = original;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // ----- sidecar（.suishi.json）读取与展示 -----
+  function readSidecar(v) {
+    if (!v || !v.sidecarHandle) return Promise.resolve(null);
+    if (v._sidecarPromise) return v._sidecarPromise;
+    v._sidecarPromise = (async () => {
+      try {
+        const file = await v.sidecarHandle.getFile();
+        const data = JSON.parse(await file.text());
+        return data && typeof data === 'object' ? data : null;
+      } catch (e) {
+        return null;
+      }
+    })();
+    return v._sidecarPromise;
+  }
+
+  async function decorateCardSource(card) {
+    const v = card._video;
+    const badge = card._sourceBadge;
+    if (!v || !badge) return;
+    const meta = await readSidecar(v);
+    if (!meta) { badge.remove(); card._sourceBadge = null; return; }
+    const s = siteOf(meta.site);
+    badge.className = `source-badge ${s.cls}`;
+    badge.textContent = `${s.icon} ${meta.uploader || s.label}`;
+    badge.title = `来自 ${s.label}${meta.uploader ? ' · ' + meta.uploader : ''}\n${meta.url || ''}`;
+    if (meta.title && card._nameEl) {
+      card._nameEl.textContent = meta.title;
+      card._nameEl.title = `${meta.title}\n文件名：${v.name}`;
+    }
+  }
+
+  async function updateModalSource(v) {
+    if (modalGleanBtn) modalGleanBtn.style.display = 'none';
+    if (modalSourceBtn) modalSourceBtn.style.display = 'none';
+    if (modalSourceLine) { modalSourceLine.textContent = ''; modalSourceLine.style.display = 'none'; }
+    const meta = await readSidecar(v);
+    if (!meta || filtered[currentModalIndex] !== v) return;
+    const s = siteOf(meta.site);
+    if (modalGleanBtn) { modalGleanBtn.style.display = ''; modalGleanBtn.textContent = '📝 拾光笺'; modalGleanBtn._meta = meta; }
+    if (modalSourceBtn) { modalSourceBtn.style.display = ''; modalSourceBtn._url = meta.url; }
+    if (modalSourceLine) {
+      modalSourceLine.style.display = '';
+      modalSourceLine.innerHTML = `${s.icon} 来自 ${escapeHtml(s.label)}${meta.uploader ? ` · ${escapeHtml(meta.uploader)}` : ''}${meta.upload_date ? ` · 发布于 ${escapeHtml(String(meta.upload_date).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'))}` : ''}${meta.downloaded_at ? ` · 存档于 ${escapeHtml(String(meta.downloaded_at).slice(0, 10))}` : ''}${meta.title && meta.title !== stemOf(v.name) ? `<br>${escapeHtml(meta.title)}` : ''}`;
+    }
+  }
+
+  async function updateFeedSource(v) {
+    if (!feedGleanBtn) return;
+    feedGleanBtn.style.display = 'none';
+    feedGleanBtn._meta = null;
+    const meta = await readSidecar(v);
+    const cur = feedEl.children[feedIndex];
+    if (!meta || !cur || cur._srcVideo !== v) return;
+    feedGleanBtn.style.display = '';
+    feedGleanBtn._meta = meta;
+  }
+
+  function gleanActionForCurrent() {
+    if (modal.classList.contains('show')) {
+      if (modalGleanBtn && modalGleanBtn._meta) sendToGlean(modalGleanBtn._meta, modalGleanBtn);
+    } else if (feedEl.classList.contains('show')) {
+      if (feedGleanBtn && feedGleanBtn._meta) sendToGlean(feedGleanBtn._meta, null);
+    }
+  }
+
+  // ----- 事件绑定 -----
+  dlEntry.addEventListener('click', () => showView('download'));
+  btnDlProbe.addEventListener('click', () => probeUrl());
+  dlUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); probeUrl(); }
+  });
+  dlUrlInput.addEventListener('paste', () => setTimeout(() => probeUrl(), 30));
+  document.addEventListener('paste', (e) => {
+    if (currentView !== 'download' || !gleanOnline) return;
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
+    if (!/https?:\/\//i.test(text)) return;
+    dlUrlInput.value = text.trim();
+    probeUrl();
+  });
+  $('btn-dl-retry').addEventListener('click', () => { clearTimeout(gleanRetryTimer); gleanConnect(); });
+  $('btn-dl-settings').addEventListener('click', promptGleanBase);
+  const btnDlSettings2 = $('btn-dl-settings-2');
+  if (btnDlSettings2) btnDlSettings2.addEventListener('click', promptGleanBase);
+  if (modalGleanBtn) modalGleanBtn.addEventListener('click', () => { if (modalGleanBtn._meta) sendToGlean(modalGleanBtn._meta, modalGleanBtn); });
+  if (modalSourceBtn) modalSourceBtn.addEventListener('click', () => { if (modalSourceBtn._url) window.open(modalSourceBtn._url, '_blank', 'noopener'); });
+  if (feedGleanBtn) feedGleanBtn.addEventListener('click', () => { if (feedGleanBtn._meta) sendToGlean(feedGleanBtn._meta, null); });
+
+  async function initDownloads() {
+    try {
+      const stored = await idbGet('downloadFolderId');
+      if (stored && savedFolders.some(f => f.id === stored)) downloadFolderId = stored;
+    } catch {}
+    updateConnUI();
+    gleanConnect();
+  }
 
   // ---------- 检索与排序事件 ----------
   searchInput.addEventListener('input', debounce(render, 150));
@@ -3454,6 +4631,7 @@
     } catch (err) {
       console.error('初始化存储失败:', err);
     }
+    initDownloads();
   }
 
   bootstrap();

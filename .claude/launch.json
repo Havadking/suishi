@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "suishi",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "8964", "."],
+      "port": 8964
+    }
+  ]
+}
