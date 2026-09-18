@@ -149,6 +149,61 @@
     border-color: var(--border-light);
   }
 
+  /* 折叠状态下顶部按钮切换为网站经典 Logo */
+  .sidebar-collapsed-logo {
+    display: none;
+  }
+  .sidebar-toggle-icon {
+    display: inline-flex;
+  }
+
+  #sidebar.collapsed .sidebar-toggle-icon {
+    display: none !important;
+  }
+  #sidebar.collapsed .sidebar-collapsed-logo {
+    display: flex !important;
+  }
+  #sidebar.collapsed #btn-toggle-sidebar {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.16s ease;
+  }
+  #sidebar.collapsed #btn-toggle-sidebar:hover {
+    background: transparent;
+    border-color: transparent;
+    transform: scale(1.08);
+  }
+  #sidebar.collapsed #btn-toggle-sidebar:hover .sidebar-collapsed-logo {
+    box-shadow: 0 4px 12px rgba(224, 122, 95, 0.45);
+  }
+  #sidebar.collapsed #btn-toggle-sidebar:active {
+    transform: scale(0.96);
+  }
+
+  /* 侧边栏三大模块清晰分界线 */
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: 6px 14px;
+    flex-shrink: 0;
+    transition: margin 0.2s ease, background 0.2s ease;
+  }
+  #sidebar.collapsed .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 10px;
+    flex-shrink: 0;
+    opacity: 0.95;
+  }
+
   .sidebar-add-wrap {
     padding: 12px 14px;
   }
@@ -177,8 +232,20 @@
     border-color: var(--accent);
     box-shadow: 0 3px 8px rgba(224, 122, 95, 0.25);
   }
+  #sidebar.collapsed .sidebar-add-wrap {
+    padding: 8px 10px 4px;
+    display: flex;
+    justify-content: center;
+  }
   #sidebar.collapsed .btn-add-folder {
-    padding: 8px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
   }
   #sidebar.collapsed .btn-add-folder span {
     display: none;
@@ -1604,6 +1671,40 @@
     padding: 1px 7px;
     line-height: 1.5;
   }
+  #sidebar.collapsed .sidebar-dl-wrap {
+    padding: 4px 10px;
+    display: flex;
+    justify-content: center;
+  }
+  #sidebar.collapsed #dl-entry {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 1px 2px rgba(65, 45, 30, 0.03);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+  #sidebar.collapsed #dl-entry:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-border);
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(224, 122, 95, 0.1);
+  }
+  #sidebar.collapsed #dl-entry.active {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #sidebar.collapsed #dl-entry.active::before {
+    display: none;
+  }
   #sidebar.collapsed .dl-count-badge { display: none; }
 
   /* ---------- 下载页 ---------- */
@@ -1972,13 +2073,15 @@
         </div>
       </div>
       <button id="btn-toggle-sidebar" class="icon-btn" title="折叠/展开侧边栏 (Ctrl+B)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="sidebar-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
           <line x1="9" y1="3" x2="9" y2="21"/>
         </svg>
+        <div class="brand-logo sidebar-collapsed-logo">📼</div>
       </button>
     </div>
 
+    <!-- 第 1 部分：添加/收藏新目录 -->
     <div class="sidebar-add-wrap">
       <button id="btn-add-folder" class="btn-add-folder" title="添加/收藏本地视频目录">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1989,6 +2092,10 @@
       </button>
     </div>
 
+    <!-- 第 1 与第 2 部分之间的清晰分界线 -->
+    <div class="sidebar-divider"></div>
+
+    <!-- 第 2 部分：下载 / 拾光笺入口 -->
     <div class="sidebar-dl-wrap">
       <div id="dl-entry" class="folder-item dl-entry" data-tooltip="下载 · 拾光笺" title="从 B 站 / 抖音存视频到本地（经由本机拾光笺服务）">
         <div class="folder-item-icon">⬇️<span id="dl-status-dot" class="dl-status-dot"></span></div>
@@ -2000,6 +2107,10 @@
       </div>
     </div>
 
+    <!-- 第 2 与第 3 部分之间的清晰分界线 -->
+    <div class="sidebar-divider"></div>
+
+    <!-- 第 3 部分：已收藏目录与分组列表 -->
     <div class="sidebar-nav-title">
       <div class="sidebar-nav-title-left">
         <span>已收藏目录</span>
@@ -2764,13 +2875,20 @@
   }
 
   // ---------- 侧边栏折叠/展开与状态管理 ----------
+  function updateSidebarToggleTitle() {
+    const isCollapsed = sidebarEl.classList.contains('collapsed');
+    btnToggleSidebar.setAttribute('title', isCollapsed ? '展开侧边栏 (Ctrl+B)' : '折叠侧边栏 (Ctrl+B)');
+  }
+
   function initSidebar() {
     const isCollapsed = localStorage.getItem('suishi_sidebar_collapsed') === 'true';
     if (isCollapsed) sidebarEl.classList.add('collapsed');
+    updateSidebarToggleTitle();
 
     btnToggleSidebar.addEventListener('click', () => {
       sidebarEl.classList.toggle('collapsed');
       localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+      updateSidebarToggleTitle();
       if (sidebarTooltip) sidebarTooltip.classList.remove('show');
     });
 
@@ -2788,6 +2906,7 @@
         e.preventDefault();
         sidebarEl.classList.toggle('collapsed');
         localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
+        updateSidebarToggleTitle();
         if (sidebarTooltip) sidebarTooltip.classList.remove('show');
       }
     });
