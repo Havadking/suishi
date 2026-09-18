@@ -190,13 +190,267 @@
     color: var(--text-light);
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    padding: 8px 16px 4px;
+    padding: 8px 14px 4px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+  }
+  .sidebar-nav-title-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sidebar-title-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    background: var(--bg-surface);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sidebar-title-btn:hover {
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+    color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .sidebar-title-btn:active {
+    transform: translateY(0);
   }
   #sidebar.collapsed .sidebar-nav-title {
     display: none;
+  }
+
+  /* ---------- 目录分组 (Folder Groups) ---------- */
+  .folder-group-section {
+    margin-bottom: 4px;
+    border-radius: var(--radius-md);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .folder-group-section.drag-target-active,
+  .ungrouped-section.drag-target-active,
+  .ungrouped-drop-hint.drag-target-active {
+    background: var(--accent-subtle) !important;
+    outline: 2px dashed var(--accent) !important;
+    outline-offset: -2px;
+  }
+  .folder-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    user-select: none;
+    transition: background 0.12s, color 0.12s;
+  }
+  .folder-group-header:hover {
+    background: var(--bg-subtle);
+    color: var(--text-main);
+  }
+  .folder-group-header .group-arrow {
+    font-size: 10px;
+    color: var(--text-light);
+    width: 12px;
+    text-align: center;
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .folder-group-header.collapsed .group-arrow {
+    transform: rotate(-90deg);
+  }
+  .folder-group-icon {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    flex-shrink: 0;
+  }
+  .folder-group-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .folder-group-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    border-radius: var(--radius-full);
+    font-weight: 600;
+  }
+  .folder-group-actions {
+    display: none;
+    align-items: center;
+    gap: 2px;
+    margin-left: 2px;
+  }
+  .folder-group-header:hover .folder-group-actions {
+    display: flex;
+  }
+  .folder-group-items {
+    padding-left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+    min-height: 4px;
+  }
+  .folder-group-items.collapsed {
+    display: none;
+  }
+  .group-empty-hint {
+    padding: 7px 8px;
+    font-size: 11px;
+    color: var(--text-light);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    background: rgba(0,0,0,0.015);
+    margin: 2px 2px;
+    transition: all 0.15s;
+  }
+  .folder-item.dragging {
+    opacity: 0.45;
+    outline: 1.5px dashed var(--accent);
+  }
+  .ungrouped-section {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-light);
+  }
+  .ungrouped-header {
+    cursor: default;
+    color: var(--text-light);
+    font-size: 11px;
+  }
+  .ungrouped-header:hover {
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  #sidebar.collapsed .folder-group-header {
+    justify-content: center;
+    padding: 8px 0;
+  }
+  #sidebar.collapsed .folder-group-header .group-arrow,
+  #sidebar.collapsed .folder-group-header .folder-group-name,
+  #sidebar.collapsed .folder-group-header .folder-group-badge,
+  #sidebar.collapsed .folder-group-header .folder-group-actions,
+  #sidebar.collapsed .ungrouped-header {
+    display: none;
+  }
+  #sidebar.collapsed .folder-group-items {
+    padding-left: 0;
+  }
+  #sidebar.collapsed .group-empty-hint {
+    display: none;
+  }
+
+  /* 分组弹窗与预设样式 */
+  .group-preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 2px 0;
+  }
+  .group-preset-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    user-select: none;
+  }
+  .group-preset-chip:hover {
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .group-preset-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .group-icon-picker-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    background: var(--bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+  }
+  .group-icon-picker-btn:hover {
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+    transform: scale(1.05);
+  }
+  .group-icon-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    max-height: 110px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .palette-icon-item {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .palette-icon-item:hover {
+    background: var(--bg-hover);
+    transform: scale(1.15);
+  }
+  .palette-icon-item.active {
+    background: var(--accent-subtle);
+    border: 1px solid var(--accent);
   }
 
   .folder-list {
@@ -1687,8 +1941,17 @@
     </div>
 
     <div class="sidebar-nav-title">
-      <span>已收藏目录</span>
-      <span id="sidebar-folder-count">0</span>
+      <div class="sidebar-nav-title-left">
+        <span>已收藏目录</span>
+        <span id="sidebar-folder-count">0</span>
+      </div>
+      <button id="btn-create-group" class="sidebar-title-btn" title="创建新分组">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>新建分组</span>
+      </button>
     </div>
 
     <div class="folder-list" id="sidebar-folder-list">
@@ -1892,6 +2155,40 @@
   </div>
 </div>
 
+<!-- 目录分组创建/编辑弹窗 -->
+<div id="group-modal" class="custom-dialog-backdrop">
+  <div class="custom-dialog" style="max-width: 460px;">
+    <div class="dialog-icon-wrap" id="group-modal-icon-preview">📁</div>
+    <h3 id="group-modal-title">新建目录分组</h3>
+    <div class="dialog-desc" style="margin-bottom: 12px; text-align: center;">
+      为已收藏目录创建虚拟分类，拖拽即可归类（不改变磁盘物理路径）
+    </div>
+
+    <!-- 预设分类快捷标签 -->
+    <div style="margin-bottom: 12px; text-align: left;">
+      <div style="font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 6px;">快捷预设推荐：</div>
+      <div id="group-preset-chips" class="group-preset-chips"></div>
+    </div>
+
+    <!-- 图标选择与名称输入 -->
+    <div style="margin: 0 0 10px; display: flex; align-items: center; gap: 8px;">
+      <div class="group-icon-picker-btn" id="group-icon-picker-btn" title="点击选择或更换图标">
+        <span id="group-selected-icon">📁</span>
+      </div>
+      <input id="group-name-input" class="rename-input" type="text" style="flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-size: 14px; background: var(--bg-surface); color: var(--text-main); outline: none; transition: border-color 0.15s;" placeholder="分组名称（如：财经、日常、学习…）">
+    </div>
+
+    <!-- 图标选择网格 (默认折叠，点击图标展开) -->
+    <div id="group-icon-palette" class="group-icon-palette" style="display:none;"></div>
+
+    <div id="group-modal-msg" style="font-size: 12px; color: var(--danger); min-height: 18px; margin-bottom: 14px; text-align: left;"></div>
+    <div class="dialog-actions">
+      <button id="btn-group-cancel" class="btn-normal">取消</button>
+      <button id="btn-group-confirm" class="btn-accent">确定创建</button>
+    </div>
+  </div>
+</div>
+
 <!-- 侧边栏折叠态浮层提示 -->
 <div id="sidebar-tooltip"></div>
 
@@ -1908,6 +2205,18 @@
   const sidebarFolderCount = $('sidebar-folder-count');
   const sidebarTooltip = $('sidebar-tooltip');
   const btnPickEmpty = $('btn-pick-empty');
+  const btnCreateGroup = $('btn-create-group');
+  const groupModal = $('group-modal');
+  const groupModalTitle = $('group-modal-title');
+  const groupModalIconPreview = $('group-modal-icon-preview');
+  const groupPresetChips = $('group-preset-chips');
+  const groupIconPickerBtn = $('group-icon-picker-btn');
+  const groupSelectedIcon = $('group-selected-icon');
+  const groupNameInput = $('group-name-input');
+  const groupIconPalette = $('group-icon-palette');
+  const groupModalMsg = $('group-modal-msg');
+  const btnGroupCancel = $('btn-group-cancel');
+  const btnGroupConfirm = $('btn-group-confirm');
 
   const searchInput = $('search');
   const sortKeySel = $('sort-key');
@@ -2046,8 +2355,34 @@
     return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
   }
 
-  // ---------- 应用级响应式状态 ----------
-  let savedFolders = [];   // Array<{ id: string, name: string, customName?: string, handle: FileSystemDirectoryHandle, addedAt: number, count?: number }>
+  let savedFolders = [];   // Array<{ id: string, name: string, customName?: string, handle: FileSystemDirectoryHandle, addedAt: number, count?: number, groupId?: string }>
+  let folderGroups = [];   // Array<{ id: string, name: string, icon: string, collapsed?: boolean, createdAt: number }>
+  let draggedFolderId = null;
+  let editingGroupId = null;
+
+  const GROUP_PRESETS = [
+    { name: '财经', icon: '📈', desc: '投资/理财/商业' },
+    { name: 'NSFW', icon: '🔞', desc: '私密/18+' },
+    { name: '日常', icon: '☕', desc: '生活/Vlog' },
+    { name: '学习', icon: '📚', desc: '教程/知识' },
+    { name: '影视', icon: '🎬', desc: '电影/剧集' },
+    { name: '游戏', icon: '🎮', desc: '高光/攻略' },
+    { name: '音乐', icon: '🎵', desc: 'MV/现场/编舞' },
+    { name: '美食', icon: '🍔', desc: '烹饪/探店' },
+    { name: '健身', icon: '🏃', desc: '运动/训练' },
+    { name: '萌宠', icon: '🐱', desc: '宠物/搞笑' },
+    { name: '科技', icon: '💻', desc: '数码/编程' },
+    { name: '旅行', icon: '✈️', desc: '风景/户外' },
+    { name: '归档', icon: '📦', desc: '杂项/临时' }
+  ];
+
+  const GROUP_ICONS = [
+    '📁', '📈', '💰', '🪙', '🔞', '🔒', '☕', '🌿', '☀️',
+    '📚', '🎓', '💡', '🎬', '🍿', '📺', '🎮', '🕹️', '👾',
+    '🎵', '🎧', '🎸', '🍔', '🍜', '🍰', '🏃', '🏋️', '⚽',
+    '🐱', '🐶', '😂', '💻', '🤖', '⚡', '🚗', '🏍️', '✈️',
+    '🏕️', '🎨', '📦', '⭐', '🏷️', '🔥'
+  ];
   let activeFolderId = null;
   let allVideos = [];      // {handle, name, path, ext, size, mtime}
   let filtered = [];       // 当前过滤后的展示数组
@@ -2364,6 +2699,7 @@
 
   async function saveFolderState() {
     await idbSet('savedFolders', savedFolders);
+    await idbSet('folderGroups', folderGroups);
     await idbSet('activeFolderId', activeFolderId);
   }
 
@@ -2396,10 +2732,10 @@
       }
     });
 
-    // 侧边栏折叠状态下悬停显示文件夹名称
+    // 侧边栏折叠状态下悬停显示文件夹或分组名称
     let activeTooltipItem = null;
     sidebarFolderList.addEventListener('mouseover', (e) => {
-      const item = e.target.closest('.folder-item');
+      const item = e.target.closest('.folder-item, .folder-group-header');
       if (!item) return;
 
       const displayName = item.getAttribute('data-tooltip') || '';
@@ -2425,7 +2761,7 @@
     });
 
     sidebarFolderList.addEventListener('mouseout', (e) => {
-      const item = e.target.closest('.folder-item');
+      const item = e.target.closest('.folder-item, .folder-group-header');
       if (item && (!e.relatedTarget || !item.contains(e.relatedTarget))) {
         if (item === activeTooltipItem) {
           activeTooltipItem = null;
@@ -2461,84 +2797,460 @@
         }
       });
     }
+
+    initGroupModal();
+  }
+
+  // ---------- 目录分组交互与拖拽管理 ----------
+  function initGroupModal() {
+    if (groupPresetChips) {
+      groupPresetChips.innerHTML = '';
+      GROUP_PRESETS.forEach(p => {
+        const chip = document.createElement('div');
+        chip.className = 'group-preset-chip';
+        chip.dataset.name = p.name;
+        chip.dataset.icon = p.icon;
+        chip.title = p.desc || p.name;
+        chip.innerHTML = `<span class="chip-icon">${p.icon}</span><span>${escapeHtml(p.name)}</span>`;
+        chip.addEventListener('click', () => {
+          if (groupNameInput) groupNameInput.value = p.name;
+          setSelectedGroupIcon(p.icon);
+          groupPresetChips.querySelectorAll('.group-preset-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          if (groupModalMsg) groupModalMsg.textContent = '';
+          if (groupNameInput) groupNameInput.focus();
+        });
+        groupPresetChips.appendChild(chip);
+      });
+    }
+
+    if (groupIconPalette) {
+      groupIconPalette.innerHTML = '';
+      GROUP_ICONS.forEach(ic => {
+        const item = document.createElement('div');
+        item.className = 'palette-icon-item';
+        item.textContent = ic;
+        item.addEventListener('click', () => {
+          setSelectedGroupIcon(ic);
+          groupIconPalette.style.display = 'none';
+        });
+        groupIconPalette.appendChild(item);
+      });
+    }
+
+    if (groupIconPickerBtn) {
+      groupIconPickerBtn.addEventListener('click', () => {
+        if (groupIconPalette) {
+          groupIconPalette.style.display = groupIconPalette.style.display === 'none' ? 'flex' : 'none';
+        }
+      });
+    }
+
+    if (btnCreateGroup) {
+      btnCreateGroup.addEventListener('click', () => {
+        openGroupModal();
+      });
+    }
+
+    if (btnGroupCancel) {
+      btnGroupCancel.addEventListener('click', closeGroupModal);
+    }
+
+    if (btnGroupConfirm) {
+      btnGroupConfirm.addEventListener('click', handleGroupSubmit);
+    }
+
+    if (groupModal) {
+      groupModal.addEventListener('click', (e) => {
+        if (e.target === groupModal) closeGroupModal();
+      });
+    }
+
+    if (groupNameInput) {
+      groupNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleGroupSubmit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeGroupModal();
+        }
+      });
+    }
+  }
+
+  function setSelectedGroupIcon(icon) {
+    if (groupSelectedIcon) groupSelectedIcon.textContent = icon;
+    if (groupModalIconPreview) groupModalIconPreview.textContent = icon;
+    if (groupIconPalette) {
+      groupIconPalette.querySelectorAll('.palette-icon-item').forEach(el => {
+        el.classList.toggle('active', el.textContent === icon);
+      });
+    }
+  }
+
+  function openGroupModal(existingGroup = null) {
+    editingGroupId = existingGroup ? existingGroup.id : null;
+    if (groupModalTitle) groupModalTitle.textContent = existingGroup ? '编辑目录分组' : '新建目录分组';
+    if (btnGroupConfirm) btnGroupConfirm.textContent = existingGroup ? '保存修改' : '确定创建';
+    if (groupNameInput) groupNameInput.value = existingGroup ? existingGroup.name : '';
+    setSelectedGroupIcon(existingGroup ? (existingGroup.icon || '📁') : '📁');
+    if (groupModalMsg) groupModalMsg.textContent = '';
+    if (groupIconPalette) groupIconPalette.style.display = 'none';
+    if (groupPresetChips) {
+      groupPresetChips.querySelectorAll('.group-preset-chip').forEach(c => {
+        c.classList.toggle('active', existingGroup && c.dataset.name === existingGroup.name);
+      });
+    }
+    if (groupModal) groupModal.classList.add('show');
+    setTimeout(() => {
+      if (groupNameInput) {
+        groupNameInput.focus();
+        groupNameInput.select();
+      }
+    }, 50);
+  }
+
+  function closeGroupModal() {
+    if (groupModal) groupModal.classList.remove('show');
+    editingGroupId = null;
+    if (groupModalMsg) groupModalMsg.textContent = '';
+    if (groupIconPalette) groupIconPalette.style.display = 'none';
+  }
+
+  async function handleGroupSubmit() {
+    const rawName = groupNameInput ? groupNameInput.value.trim() : '';
+    const icon = groupSelectedIcon ? groupSelectedIcon.textContent.trim() || '📁' : '📁';
+
+    if (!rawName) {
+      if (groupModalMsg) groupModalMsg.textContent = '分组名称不能为空';
+      return;
+    }
+    if (rawName.length > 20) {
+      if (groupModalMsg) groupModalMsg.textContent = '分组名称不能超过 20 个字符';
+      return;
+    }
+
+    if (editingGroupId) {
+      const dup = folderGroups.find(g => g.id !== editingGroupId && g.name.toLowerCase() === rawName.toLowerCase());
+      if (dup) {
+        if (groupModalMsg) groupModalMsg.textContent = `已存在同名分组「${rawName}」`;
+        return;
+      }
+      const grp = folderGroups.find(g => g.id === editingGroupId);
+      if (grp) {
+        grp.name = rawName;
+        grp.icon = icon;
+      }
+    } else {
+      const dup = folderGroups.find(g => g.name.toLowerCase() === rawName.toLowerCase());
+      if (dup) {
+        if (groupModalMsg) groupModalMsg.textContent = `已存在同名分组「${rawName}」`;
+        return;
+      }
+      const newGroup = {
+        id: 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name: rawName,
+        icon,
+        collapsed: false,
+        createdAt: Date.now()
+      };
+      folderGroups.push(newGroup);
+    }
+
+    await saveFolderState();
+    closeGroupModal();
+    renderSidebar();
+  }
+
+  async function deleteFolderGroup(groupId) {
+    const group = folderGroups.find(g => g.id === groupId);
+    if (!group) return;
+    if (confirm(`确定要解散分组「${group.icon} ${group.name}」吗？\n（组内的目录将恢复为未分组状态，绝不会删除您的磁盘文件与目录）`)) {
+      savedFolders.forEach(f => {
+        if (f.groupId === groupId) f.groupId = null;
+      });
+      folderGroups = folderGroups.filter(g => g.id !== groupId);
+      await saveFolderState();
+      renderSidebar();
+    }
+  }
+
+  async function moveFolderToGroup(folderId, targetGroupId) {
+    const folder = savedFolders.find(f => f.id === folderId);
+    if (!folder) return;
+    folder.groupId = targetGroupId || null;
+    await saveFolderState();
+    renderSidebar();
+  }
+
+  async function toggleFolderGroupCollapsed(groupId) {
+    const group = folderGroups.find(g => g.id === groupId);
+    if (!group) return;
+    group.collapsed = !group.collapsed;
+    await saveFolderState();
+    renderSidebar();
+  }
+
+  function bindGroupDropTarget(el, targetGroupId) {
+    el.addEventListener('dragover', (e) => {
+      if (!draggedFolderId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add('drag-target-active');
+    });
+    el.addEventListener('dragleave', (e) => {
+      if (!el.contains(e.relatedTarget)) {
+        el.classList.remove('drag-target-active');
+      }
+    });
+    el.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.classList.remove('drag-target-active');
+      const folderId = e.dataTransfer.getData('text/plain') || draggedFolderId;
+      if (folderId) {
+        await moveFolderToGroup(folderId, targetGroupId);
+      }
+    });
+  }
+
+  function createFolderItemElement(folder) {
+    const item = document.createElement('div');
+    const isActiveItem = currentView === 'library' && folder.id === activeFolderId;
+    item.className = 'folder-item' + (isActiveItem ? ' active' : '');
+    const displayName = folder.customName || folder.name;
+    item.setAttribute('data-tooltip', displayName);
+    item.setAttribute('title', displayName);
+    item.setAttribute('data-folder-id', folder.id);
+    item.setAttribute('draggable', 'true');
+
+    item.addEventListener('dragstart', (e) => {
+      draggedFolderId = folder.id;
+      item.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', folder.id);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      draggedFolderId = null;
+      item.classList.remove('dragging');
+      document.querySelectorAll('.drag-target-active').forEach(el => el.classList.remove('drag-target-active'));
+    });
+
+    const icon = document.createElement('div');
+    icon.className = 'folder-item-icon';
+    icon.textContent = isActiveItem ? '🎬' : '📁';
+
+    const details = document.createElement('div');
+    details.className = 'folder-item-details';
+
+    const nameSpan = document.createElement('div');
+    nameSpan.className = 'folder-item-name';
+    nameSpan.textContent = displayName;
+    nameSpan.title = displayName;
+
+    const subSpan = document.createElement('div');
+    subSpan.className = 'folder-item-sub';
+    subSpan.textContent = folder.count != null ? `${folder.count} 个视频` : '点击载入';
+
+    details.appendChild(nameSpan);
+    details.appendChild(subSpan);
+
+    const actions = document.createElement('div');
+    actions.className = 'folder-item-actions';
+
+    if (folder.groupId) {
+      const ungrpBtn = document.createElement('button');
+      ungrpBtn.className = 'folder-action-btn';
+      ungrpBtn.title = '移出此分组';
+      ungrpBtn.innerHTML = '↩️';
+      ungrpBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await moveFolderToGroup(folder.id, null);
+      });
+      actions.appendChild(ungrpBtn);
+    }
+
+    const renameBtn = document.createElement('button');
+    renameBtn.className = 'folder-action-btn';
+    renameBtn.title = '重命名显示名称';
+    renameBtn.innerHTML = '✏️';
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = prompt('设置此目录在侧边栏中的别名：', displayName);
+      if (next !== null && next.trim()) {
+        folder.customName = next.trim();
+        saveFolderState();
+        renderSidebar();
+      }
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'folder-action-btn danger';
+    removeBtn.title = '从侧边栏移除（不删除硬盘文件）';
+    removeBtn.innerHTML = '✕';
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`确定要从侧边栏移除「${displayName}」吗？\n（不会删除您磁盘中的视频文件）`)) {
+        removeFolder(folder.id);
+      }
+    });
+
+    actions.appendChild(renameBtn);
+    actions.appendChild(removeBtn);
+
+    item.appendChild(icon);
+    item.appendChild(details);
+    item.appendChild(actions);
+
+    item.addEventListener('click', () => {
+      if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+      if (currentView !== 'library') {
+        showView('library');
+        if (folder.id === activeFolderId) return;
+      }
+      switchFolder(folder.id);
+    });
+
+    return item;
   }
 
   function renderSidebar() {
     sidebarFolderList.innerHTML = '';
     sidebarFolderCount.textContent = savedFolders.length;
 
-    savedFolders.forEach((folder) => {
-      const item = document.createElement('div');
-      const isActiveItem = currentView === 'library' && folder.id === activeFolderId;
-      item.className = 'folder-item' + (isActiveItem ? ' active' : '');
-      const displayName = folder.customName || folder.name;
-      item.setAttribute('data-tooltip', displayName);
-      item.setAttribute('title', displayName);
+    // 如果还没有建立任何分组，直接渲染扁平列表
+    if (!folderGroups || folderGroups.length === 0) {
+      savedFolders.forEach((folder) => {
+        sidebarFolderList.appendChild(createFolderItemElement(folder));
+      });
+      return;
+    }
 
-      const icon = document.createElement('div');
-      icon.className = 'folder-item-icon';
-      icon.textContent = isActiveItem ? '🎬' : '📁';
+    // 存在分组：按分组结构渲染
+    folderGroups.forEach((group) => {
+      const groupFolders = savedFolders.filter(f => f.groupId === group.id);
 
-      const details = document.createElement('div');
-      details.className = 'folder-item-details';
+      const section = document.createElement('div');
+      section.className = 'folder-group-section';
+      section.dataset.groupId = group.id;
 
-      const nameSpan = document.createElement('div');
-      nameSpan.className = 'folder-item-name';
-      nameSpan.textContent = displayName;
-      nameSpan.title = displayName;
+      const header = document.createElement('div');
+      header.className = 'folder-group-header' + (group.collapsed ? ' collapsed' : '');
+      header.dataset.groupId = group.id;
+      const tooltipText = `${group.icon} ${group.name} (${groupFolders.length} 个目录)`;
+      header.setAttribute('data-tooltip', tooltipText);
+      header.setAttribute('title', tooltipText);
 
-      const subSpan = document.createElement('div');
-      subSpan.className = 'folder-item-sub';
-      subSpan.textContent = folder.count != null ? `${folder.count} 个视频` : '点击载入';
+      const arrow = document.createElement('span');
+      arrow.className = 'group-arrow';
+      arrow.textContent = '▾';
 
-      details.appendChild(nameSpan);
-      details.appendChild(subSpan);
+      const icon = document.createElement('span');
+      icon.className = 'folder-group-icon';
+      icon.textContent = group.icon || '📁';
+
+      const name = document.createElement('span');
+      name.className = 'folder-group-name';
+      name.textContent = group.name;
+
+      const badge = document.createElement('span');
+      badge.className = 'folder-group-badge';
+      badge.textContent = groupFolders.length;
 
       const actions = document.createElement('div');
-      actions.className = 'folder-item-actions';
+      actions.className = 'folder-group-actions';
 
-      const renameBtn = document.createElement('button');
-      renameBtn.className = 'folder-action-btn';
-      renameBtn.title = '重命名显示名称';
-      renameBtn.innerHTML = '✏️';
-      renameBtn.addEventListener('click', (e) => {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'folder-action-btn';
+      editBtn.title = '编辑分组';
+      editBtn.innerHTML = '✏️';
+      editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const next = prompt('设置此目录在侧边栏中的别名：', displayName);
-        if (next !== null && next.trim()) {
-          folder.customName = next.trim();
-          saveFolderState();
-          renderSidebar();
-        }
+        openGroupModal(group);
       });
 
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'folder-action-btn danger';
-      removeBtn.title = '从侧边栏移除（不删除硬盘文件）';
-      removeBtn.innerHTML = '✕';
-      removeBtn.addEventListener('click', (e) => {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'folder-action-btn danger';
+      delBtn.title = '解散分组（目录恢复为未分组）';
+      delBtn.innerHTML = '🗑️';
+      delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm(`确定要从侧边栏移除「${displayName}」吗？\n（不会删除您磁盘中的视频文件）`)) {
-          removeFolder(folder.id);
-        }
+        deleteFolderGroup(group.id);
       });
 
-      actions.appendChild(renameBtn);
-      actions.appendChild(removeBtn);
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
 
-      item.appendChild(icon);
-      item.appendChild(details);
-      item.appendChild(actions);
+      header.appendChild(arrow);
+      header.appendChild(icon);
+      header.appendChild(name);
+      header.appendChild(badge);
+      header.appendChild(actions);
 
-      item.addEventListener('click', () => {
-        if (sidebarTooltip) sidebarTooltip.classList.remove('show');
-        if (currentView !== 'library') {
-          showView('library');
-          if (folder.id === activeFolderId) return;
-        }
-        switchFolder(folder.id);
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.folder-group-actions')) return;
+        toggleFolderGroupCollapsed(group.id);
       });
-      sidebarFolderList.appendChild(item);
+
+      const itemsContainer = document.createElement('div');
+      itemsContainer.className = 'folder-group-items' + (group.collapsed ? ' collapsed' : '');
+      itemsContainer.dataset.groupId = group.id;
+
+      if (groupFolders.length > 0) {
+        groupFolders.forEach(folder => {
+          itemsContainer.appendChild(createFolderItemElement(folder));
+        });
+      } else {
+        const hint = document.createElement('div');
+        hint.className = 'group-empty-hint';
+        hint.textContent = '拖拽目录至此归入分组';
+        itemsContainer.appendChild(hint);
+      }
+
+      bindGroupDropTarget(section, group.id);
+
+      section.appendChild(header);
+      section.appendChild(itemsContainer);
+      sidebarFolderList.appendChild(section);
     });
+
+    // 渲染未分组部分
+    const ungroupedFolders = savedFolders.filter(f => !f.groupId || !folderGroups.some(g => g.id === f.groupId));
+    if (ungroupedFolders.length > 0) {
+      const ungroupedSection = document.createElement('div');
+      ungroupedSection.className = 'ungrouped-section';
+
+      const ungroupedHeader = document.createElement('div');
+      ungroupedHeader.className = 'folder-group-header ungrouped-header';
+      const ungrpTooltip = `未分组 (${ungroupedFolders.length} 个目录)`;
+      ungroupedHeader.setAttribute('data-tooltip', ungrpTooltip);
+      ungroupedHeader.setAttribute('title', ungrpTooltip);
+      ungroupedHeader.innerHTML = `<span class="folder-group-icon">📂</span><span class="folder-group-name">未分组目录</span><span class="folder-group-badge">${ungroupedFolders.length}</span>`;
+
+      const ungroupedItems = document.createElement('div');
+      ungroupedItems.className = 'folder-group-items';
+
+      ungroupedFolders.forEach(folder => {
+        ungroupedItems.appendChild(createFolderItemElement(folder));
+      });
+
+      bindGroupDropTarget(ungroupedSection, null);
+
+      ungroupedSection.appendChild(ungroupedHeader);
+      ungroupedSection.appendChild(ungroupedItems);
+      sidebarFolderList.appendChild(ungroupedSection);
+    } else if (savedFolders.length > 0) {
+      // 若所有目录都在分组内，提供一个便捷的拖拽移出接收区
+      const ungroupedDropArea = document.createElement('div');
+      ungroupedDropArea.className = 'group-empty-hint ungrouped-drop-hint';
+      ungroupedDropArea.style.margin = '8px 4px 4px';
+      ungroupedDropArea.textContent = '↩️ 拖拽至此移出分组';
+      bindGroupDropTarget(ungroupedDropArea, null);
+      sidebarFolderList.appendChild(ungroupedDropArea);
+    }
   }
 
   async function removeFolder(id) {
@@ -4077,6 +4789,15 @@
       return;
     }
 
+    // 分组弹窗打开时
+    if (groupModal && groupModal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeGroupModal();
+      }
+      return;
+    }
+
     // 重命名弹窗打开时
     if (renameModal && renameModal.classList.contains('show')) {
       if (e.key === 'Escape') {
@@ -5041,7 +5762,11 @@
 
     try {
       const storedFolders = await idbGet('savedFolders');
+      const storedGroups = await idbGet('folderGroups');
       const storedActiveId = await idbGet('activeFolderId');
+      if (Array.isArray(storedGroups)) {
+        folderGroups = storedGroups;
+      }
       if (Array.isArray(storedFolders) && storedFolders.length) {
         savedFolders = storedFolders;
         activeFolderId = storedActiveId && savedFolders.some(f => f.id === storedActiveId)
@@ -5050,6 +5775,7 @@
         renderSidebar();
         await loadActiveFolder();
       } else {
+        renderSidebar();
         await migrateLegacyIDB();
       }
     } catch (err) {
