@@ -97,3 +97,17 @@ test('Modal、Feed 与卡片上均挂载了重命名入口与 F2 快捷键', () 
   assert.match(scriptCode, /openRenameDialog\(v\)/, '卡片重命名按钮应调用 openRenameDialog');
   assert.match(scriptCode, /e\.key === 'F2'/, '应该注册 F2 重命名快捷键');
 });
+
+// ---------- 5. 容错与回退：handle.move 抛出 NotSupportedError 时平滑回退 ----------
+test('performRenameVideo 当 handle.move 抛出 NotSupportedError 时自动降级为读写替换', () => {
+  assert.match(
+    scriptCode,
+    /if\s*\(\s*typeof\s+v\.handle\.move\s*===\s*['"]function['"]\s*\)\s*\{[\s\S]*?try\s*\{[\s\S]*?await\s+v\.handle\.move\([\s\S]*?\}\s*catch\s*\(e\)\s*\{/,
+    '必须对 handle.move 进行独立 try-catch 以允许平滑回退'
+  );
+  assert.match(
+    scriptCode,
+    /if\s*\(\s*!fileMoved\s*\)\s*\{[\s\S]*?await\s+writable\.write\(file\)[\s\S]*?await\s+writable\.close\(\)[\s\S]*?await\s+parent\.removeEntry\(v\.name\)/,
+    '降级逻辑必须先完整写入新文件再移除原文件'
+  );
+});

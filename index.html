@@ -3091,21 +3091,36 @@
     const newFullName = `${newStem}.${v.ext}`;
     const parent = v.parentHandle || cur.handle;
 
-    // 2. 物理重命名视频文件
-    try {
-      if (typeof v.handle.move === 'function') {
+    // 2. 物理重命名视频文件（优先尝试 move()，若本地文件系统抛出 NotSupportedError 则平滑降级为写入替换）
+    let fileMoved = false;
+    if (typeof v.handle.move === 'function') {
+      try {
         await v.handle.move(newFullName);
-      } else {
+        fileMoved = true;
+      } catch (e) {
+        // Chromium 对普通本地文件夹（非 OPFS）的 FileSystemFileHandle.move 会抛出 NotSupportedError
+        console.warn('handle.move 不受当前文件系统支持，平滑回退至读写替换:', e);
+      }
+    }
+
+    if (!fileMoved) {
+      try {
+        const file = await v.handle.getFile();
         const newFh = await parent.getFileHandle(newFullName, { create: true });
         const writable = await newFh.createWritable();
-        const file = await v.handle.getFile();
-        await file.stream().pipeTo(writable);
+        try {
+          await writable.write(file);
+          await writable.close();
+        } catch (writeErr) {
+          try { await parent.removeEntry(newFullName); } catch {}
+          throw writeErr;
+        }
         await parent.removeEntry(v.name);
         v.handle = newFh;
+      } catch (err) {
+        alert(`重命名文件失败: ${err.message || err}`);
+        return false;
       }
-    } catch (err) {
-      alert(`重命名文件失败: ${err.message || err}`);
-      return false;
     }
 
     // 3. 同步重命名与更新 sidecar（.suishi.json）
@@ -3119,22 +3134,33 @@
           sidecarData = JSON.parse(await sFile.text());
         } catch {}
 
-        if (typeof v.sidecarHandle.move === 'function') {
-          await v.sidecarHandle.move(newSidecarName);
-        } else {
-          const newSh = await parent.getFileHandle(newSidecarName, { create: true });
-          const sFile = await v.sidecarHandle.getFile();
-          const writable = await newSh.createWritable();
-          await sFile.stream().pipeTo(writable);
-          await parent.removeEntry(oldSidecarName);
-          v.sidecarHandle = newSh;
-        }
-
         if (sidecarData && typeof sidecarData === 'object') {
           sidecarData.title = newStem;
+        }
+
+        let sidecarMoved = false;
+        if (typeof v.sidecarHandle.move === 'function') {
+          try {
+            await v.sidecarHandle.move(newSidecarName);
+            sidecarMoved = true;
+          } catch (e) {}
+        }
+
+        if (!sidecarMoved) {
+          const newSh = await parent.getFileHandle(newSidecarName, { create: true });
+          const writable = await newSh.createWritable();
+          const content = sidecarData ? JSON.stringify(sidecarData, null, 2) : await (await v.sidecarHandle.getFile()).text();
+          await writable.write(content);
+          await writable.close();
+          await parent.removeEntry(oldSidecarName);
+          v.sidecarHandle = newSh;
+        } else if (sidecarData) {
           const writable = await v.sidecarHandle.createWritable();
           await writable.write(JSON.stringify(sidecarData, null, 2));
           await writable.close();
+        }
+
+        if (sidecarData) {
           v._sidecarPromise = Promise.resolve(sidecarData);
         }
       } catch (e) {
