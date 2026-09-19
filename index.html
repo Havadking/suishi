@@ -1135,6 +1135,16 @@
     color: #fff;
   }
   .card.is-image:hover { border-color: var(--secondary-accent); }
+  /* 从查看器 / Feed 退出后，定位到刚才那一项的短暂高亮 */
+  .card.is-current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-border), var(--shadow-md);
+    animation: cardPulse 1.4s ease-out forwards;
+  }
+  @keyframes cardPulse {
+    0%, 60% { box-shadow: 0 0 0 3px var(--accent-border), var(--shadow-md); }
+    100% { box-shadow: var(--shadow-sm); border-color: var(--border); }
+  }
   .card.is-image .thumb-wrap { background: #23201D; }
   .thumb-wrap .placeholder.image-error { color: rgba(255, 180, 160, 0.7); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 
@@ -1613,13 +1623,14 @@
     width: 92vw;
     height: 72vh;
     overflow: hidden;
-    cursor: grab;
+    cursor: default;
     touch-action: none;
     border-radius: var(--radius-md);
   }
   #modal.is-image .image-stage { display: block; }
   #modal.is-image video { display: none; }
-  #modal .image-stage.dragging { cursor: grabbing; }
+  #modal .image-stage.pannable { cursor: grab; }
+  #modal .image-stage.pannable.dragging { cursor: grabbing; }
   #modal .image-stage img {
     position: absolute;
     left: 50%;
@@ -5681,6 +5692,7 @@
   }
 
   function closeFeed() {
+    const lastItem = feedList[feedIndex];
     feedEl.classList.remove('show');
     feedHud.style.display = 'none';
     document.body.style.overflow = '';
@@ -5689,6 +5701,7 @@
     Array.from(feedEl.children).forEach(unloadFeedSlideSrc);
     feedEl.innerHTML = '';
     feedList = [];
+    if (lastItem) revealCardInGrid(filtered.indexOf(lastItem));
   }
 
   function feedNavigate(delta) {
@@ -5810,7 +5823,22 @@
     modalVideo.load();
     clearImageStage();
     if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    const lastIdx = currentModalIndex;
     currentModalIndex = -1;
+    revealCardInGrid(lastIdx);
+  }
+
+  // 关闭查看器 / Feed 后，把网格滚到刚才看的那一项并短暂高亮；分块渲染还没挂到的话先补挂
+  function revealCardInGrid(idx) {
+    if (idx < 0 || idx >= filtered.length) return;
+    let guard = 0;
+    while (renderedCount <= idx && renderedCount < renderQueue.length && guard++ < 200) renderNextChunk();
+    const card = gridEl.querySelector(`.card[data-idx="${idx}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: 'center', behavior: 'auto' });
+    gridEl.querySelectorAll('.card.is-current').forEach(c => c.classList.remove('is-current'));
+    card.classList.add('is-current');
+    setTimeout(() => card.classList.remove('is-current'), 1400);
   }
 
   // ---------- 图片查看器：缩放 / 平移 / 旋转 / 适应 / 1:1 ----------
@@ -5885,6 +5913,8 @@
     if (!imgView.natW) return;
     modalImage.style.transform = `translate(${imgView.tx}px, ${imgView.ty}px) translate(-50%, -50%) scale(${imgView.scale}) rotate(${imgView.rot}deg)`;
     imageZoomLabel.textContent = `${Math.round(imgView.scale * 100)}%`;
+    // 只有放大超过适应尺寸、或图片纵向放不下时才显示可拖动的小手
+    modalImageStage.classList.toggle('pannable', imgView.scale > imgView.fit + 0.001 || imageOverflowsVertically());
   }
   // 以 (cx, cy) 为不动点缩放：缩放前后光标下的图像点保持不动
   function zoomImageAt(factor, cx, cy) {
@@ -5979,8 +6009,20 @@
     imgView.ty = Math.max(-limit, Math.min(limit, imgView.ty - dy));
     applyImageTransform();
   }
+  // 翻页：触控板会连发很多小 delta，累计到阈值再翻，并加冷却时间
+  function wheelNavigate(deltaY) {
+    const now = performance.now();
+    wheelNavAccum += deltaY;
+    if (Math.abs(wheelNavAccum) < 30) return;
+    if (now - wheelNavLast < WHEEL_NAV_COOLDOWN) { wheelNavAccum = 0; return; }
+    wheelNavLast = now;
+    const dir = wheelNavAccum > 0 ? 1 : -1;
+    wheelNavAccum = 0;
+    navigate(dir);
+  }
   modalImageStage.addEventListener('wheel', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (e.ctrlKey || e.metaKey) {
       zoomImageAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
       return;
@@ -5989,15 +6031,15 @@
       panImageVertically(e.deltaY);
       return;
     }
-    // 翻页：触控板会连发很多小 delta，累计到阈值再翻，并加冷却时间
-    const now = performance.now();
-    wheelNavAccum += e.deltaY;
-    if (Math.abs(wheelNavAccum) < 30) return;
-    if (now - wheelNavLast < WHEEL_NAV_COOLDOWN) { wheelNavAccum = 0; return; }
-    wheelNavLast = now;
-    const dir = wheelNavAccum > 0 ? 1 : -1;
-    wheelNavAccum = 0;
-    navigate(dir);
+    wheelNavigate(e.deltaY);
+  }, { passive: false });
+  // 视频模式、以及图片舞台之外的背景 / 工具条：滚轮同样翻上一个 / 下一个（缩略图条自己横向滚动，不拦）
+  modal.addEventListener('wheel', (e) => {
+    if (!modal.classList.contains('show')) return;
+    if (e.target.closest('.image-strip, .image-panel')) return;
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) return;
+    wheelNavigate(e.deltaY);
   }, { passive: false });
 
   // 拖拽平移；没有拖动距离的单击 = 关闭查看器（延迟一拍，给双击缩放让路）
