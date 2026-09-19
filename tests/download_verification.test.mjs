@@ -39,7 +39,7 @@ test('HTML 包含下载页与拾光笺联动所需的 DOM 元素', () => {
   assert.match(htmlContent, /#main-wrap\.view-download #download-view\s*\{\s*display:\s*block/, '下载视图应通过 .view-download 切换显示');
   assert.match(htmlContent, /\.source-badge\s*\{/, '应有卡片来源徽标样式');
   assert.match(htmlContent, /\.dl-progress\s*\{/, '应有下载进度条样式');
-  assert.match(htmlContent, /<span id="version-label">v1\.3<\/span>/, '版本号应升到 v1.3');
+  assert.match(htmlContent, /<span id="version-label">v1\.[3-9]<\/span>/, '版本号应不低于 v1.3');
 });
 
 // ---------- 2. 语法完整性 ----------

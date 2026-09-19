@@ -2404,7 +2404,7 @@
     <div class="sidebar-footer">
       <div class="sidebar-footer-row">
         <span>随手拾起 · 片刻生活</span>
-        <span id="version-label">v1.3</span>
+        <span id="version-label">v1.4</span>
       </div>
       <button id="btn-clear-cache" class="btn-clear-cache" title="清理已缓存的封面海报，释放浏览器存储空间">
         🧹 清理缩略图缓存
@@ -5961,26 +5961,75 @@
     const b = e.target.closest('button[data-act]');
     if (b) imageToolAction(b.dataset.act);
   });
+  // 滚轮：Ctrl/⌘ + 滚轮以光标为中心缩放；图片在舞台里纵向放不下时滚轮上下平移；否则滚轮翻上一张 / 下一张
+  const WHEEL_NAV_COOLDOWN = 280;
+  let wheelNavLast = 0;
+  let wheelNavAccum = 0;
+  function imageOverflowsVertically() {
+    if (!imgView.natW) return false;
+    const rotated = imgView.rot % 180 !== 0;
+    const sh = (rotated ? imgView.natW : imgView.natH) * imgView.scale;
+    return sh > modalImageStage.getBoundingClientRect().height + 1;
+  }
+  function panImageVertically(dy) {
+    const r = modalImageStage.getBoundingClientRect();
+    const rotated = imgView.rot % 180 !== 0;
+    const sh = (rotated ? imgView.natW : imgView.natH) * imgView.scale;
+    const limit = Math.max(0, (sh - r.height) / 2);
+    imgView.ty = Math.max(-limit, Math.min(limit, imgView.ty - dy));
+    applyImageTransform();
+  }
   modalImageStage.addEventListener('wheel', (e) => {
     e.preventDefault();
-    zoomImageAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
+    if (e.ctrlKey || e.metaKey) {
+      zoomImageAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
+      return;
+    }
+    if (imageOverflowsVertically()) {
+      panImageVertically(e.deltaY);
+      return;
+    }
+    // 翻页：触控板会连发很多小 delta，累计到阈值再翻，并加冷却时间
+    const now = performance.now();
+    wheelNavAccum += e.deltaY;
+    if (Math.abs(wheelNavAccum) < 30) return;
+    if (now - wheelNavLast < WHEEL_NAV_COOLDOWN) { wheelNavAccum = 0; return; }
+    wheelNavLast = now;
+    const dir = wheelNavAccum > 0 ? 1 : -1;
+    wheelNavAccum = 0;
+    navigate(dir);
   }, { passive: false });
+
+  // 拖拽平移；没有拖动距离的单击 = 关闭查看器（延迟一拍，给双击缩放让路）
+  let imageClickTimer = null;
   modalImageStage.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || !imgView.natW) return;
-    imgView.drag = { x: e.clientX, y: e.clientY, tx: imgView.tx, ty: imgView.ty };
+    imgView.drag = { x: e.clientX, y: e.clientY, tx: imgView.tx, ty: imgView.ty, moved: false };
     modalImageStage.setPointerCapture(e.pointerId);
     modalImageStage.classList.add('dragging');
   });
   modalImageStage.addEventListener('pointermove', (e) => {
     if (!imgView.drag) return;
-    imgView.tx = imgView.drag.tx + (e.clientX - imgView.drag.x);
-    imgView.ty = imgView.drag.ty + (e.clientY - imgView.drag.y);
+    const dx = e.clientX - imgView.drag.x, dy = e.clientY - imgView.drag.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) imgView.drag.moved = true;
+    if (!imgView.drag.moved) return;
+    imgView.tx = imgView.drag.tx + dx;
+    imgView.ty = imgView.drag.ty + dy;
     applyImageTransform();
   });
-  const endImageDrag = () => { imgView.drag = null; modalImageStage.classList.remove('dragging'); };
+  const endImageDrag = (e) => {
+    const wasClick = imgView.drag && !imgView.drag.moved && e && e.type === 'pointerup';
+    imgView.drag = null;
+    modalImageStage.classList.remove('dragging');
+    if (wasClick) {
+      clearTimeout(imageClickTimer);
+      imageClickTimer = setTimeout(() => { if (modal.classList.contains('is-image')) closeModal(); }, 260);
+    }
+  };
   modalImageStage.addEventListener('pointerup', endImageDrag);
   modalImageStage.addEventListener('pointercancel', endImageDrag);
   modalImageStage.addEventListener('dblclick', (e) => {
+    clearTimeout(imageClickTimer);
     if (!imgView.natW) return;
     if (imgView.scale > imgView.fit + 0.001) fitImage('all');
     else zoomImageAt((2 * imgView.fit) / imgView.scale, e.clientX, e.clientY);
@@ -6038,7 +6087,7 @@
       exifHtml = `<h4>EXIF</h4><div class="panel-note" style="margin-bottom:20px;">${v._exifRead ? '这张图没有 EXIF 信息（截图 / 导出图通常没有）。' : '读取中…'}</div>`;
     }
     imagePanel.innerHTML = `<h4>文件</h4>${dl(rows)}${exifHtml}` +
-      `<div class="panel-note">滚轮缩放 · 拖拽平移 · 双击在「适应」与 2× 间切换 · R 旋转 · 0 适应 · 1 原始像素 · Space 幻灯</div>`;
+      `<div class="panel-note">滚轮翻页 · Ctrl+滚轮缩放 · 拖拽平移 · 双击在「适应」与 2× 间切换 · 单击关闭 · R 旋转 · 0 适应 · 1 原始像素 · Space 幻灯</div>`;
   }
 
   // 上一个 / 下一个：跳过浏览器打不开的格式（MKV、HEIC…），不在翻页途中弹拦截提示
