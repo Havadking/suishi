@@ -1,6 +1,6 @@
 # 随拾 (SuiShi) · 「🖼 看图」功能 设计与开发报告
 
-> 状态：Sprint A 已落地（扫描 / 分段器 / 图片卡片 / 缩略图管线 / 查看器 / 跨类型翻页 / 拦截 / 星标·重命名·删除打通）；Sprint B（Feed 幻灯、幻灯放映、瀑布流、EXIF、按拍摄时间排序、超大图降级）与 Sprint C 待做。前端可点击原型见 [prototypes/image-browser.html](prototypes/image-browser.html)（在线版：https://claude.ai/artifact/4SpPknJEiUwBBjB4ATiGo9 ，右下角「导览」可跳到 5 个场景，勾选「显示设计标注」看设计说明）。
+> 状态：Sprint A、B 已落地（扫描 / 分段器 / 图片卡片 / 缩略图 / 查看器 / 跨类型翻页 / 拦截 / Feed 图片幻灯 / 幻灯放映 / 瀑布流 / EXIF 与按拍摄时间排序 / 超大图降级）；Sprint C（README、ROADMAP、版本号、验收）待做。前端可点击原型见 [prototypes/image-browser.html](prototypes/image-browser.html)（在线版：https://claude.ai/artifact/4SpPknJEiUwBBjB4ATiGo9 ，右下角「导览」可跳到 5 个场景，勾选「显示设计标注」看设计说明）。
 > 目标：让随拾的抽屉不只装视频，也装照片、截图、表情包——同一套目录、同一套网格、同一套星标 / 重命名 / 删除，再加一个像样的看图器。
 
 ---

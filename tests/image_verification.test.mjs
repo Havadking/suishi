@@ -23,21 +23,24 @@ function extractFunction(name) {
   return scriptCode.slice(m.index, i + 1);
 }
 function extractConst(name) {
-  const m = new RegExp(`const\\s+${name}\\s*=\\s*(\\[[\\s\\S]*?\\]);`).exec(scriptCode);
+  const m = new RegExp(`const\\s+${name}\\s*=\\s*([\\[{][\\s\\S]*?[\\]}]);`).exec(scriptCode);
   assert.ok(m, `内联脚本里应该有常量 ${name}`);
   return `const ${name} = ${m[1]};`;
 }
 // vm 里造出来的对象原型属于另一个 realm，deepEqual(strict) 会判不等，先拍平再比
 const plain = (o) => (o && typeof o === 'object' ? { ...o } : o);
+const wh = (o) => (o ? { w: o.w, h: o.h } : o);
 function loadFunctions(names, extraContext = {}) {
-  const ctx = vm.createContext({ console, DataView, Uint8Array, ArrayBuffer, Math, String, ...extraContext });
-  vm.runInContext(extractConst('VIDEO_EXT') + extractConst('IMAGE_EXT') + extractConst('NATIVE_PLAYABLE') + extractConst('NATIVE_VIEWABLE'), ctx);
-  for (const n of names) vm.runInContext(extractFunction(n), ctx);
+  const ctx = vm.createContext({ console, DataView, Uint8Array, ArrayBuffer, Math, String, Object, Date, ...extraContext });
+  vm.runInContext(extractConst('VIDEO_EXT') + extractConst('IMAGE_EXT') + extractConst('NATIVE_PLAYABLE') + extractConst('NATIVE_VIEWABLE')
+    + extractConst('EXIF_IFD0_TAGS') + extractConst('EXIF_SUB_TAGS'), ctx);
+  const all = names.includes('parseImageHeader') && !names.includes('parseExifTiff') ? [...names, 'parseExifTiff'] : names;
+  for (const n of all) vm.runInContext(extractFunction(n), ctx);
   return ctx;
 }
 
 // ---------- 1. DOM / CSS 结构 ----------
-test('HTML 包含看图功能（Sprint A）所需的 DOM 元素与样式', () => {
+test('HTML 包含看图功能所需的 DOM 元素与样式', () => {
   for (const id of ['media-seg', 'media-n-all', 'media-n-video', 'media-n-image',
                     'modal-image-stage', 'modal-image', 'modal-info-btn', 'image-tools', 'image-zoom-label',
                     'image-strip', 'image-panel', 'rename-title']) {
@@ -103,18 +106,81 @@ function pngIHDR(w, h) {
 }
 test('parseImageHeader 只读文件头即可得到 JPEG / PNG / GIF / WebP 的像素尺寸', () => {
   const ctx = loadFunctions(['parseImageHeader']);
-  assert.deepEqual(plain(ctx.parseImageHeader(jpegWithSOF(4032, 3024))), { w: 4032, h: 3024 });
-  assert.deepEqual(plain(ctx.parseImageHeader(jpegWithSOF(4032, 3024, 1))), { w: 4032, h: 3024 }, 'Orientation=1 不对调');
-  assert.deepEqual(plain(ctx.parseImageHeader(jpegWithSOF(4032, 3024, 6))), { w: 3024, h: 4032 }, 'Orientation=6 应对调宽高');
-  assert.deepEqual(plain(ctx.parseImageHeader(pngIHDR(1170, 2532))), { w: 1170, h: 2532 });
+  assert.deepEqual(wh(ctx.parseImageHeader(jpegWithSOF(4032, 3024))), { w: 4032, h: 3024 });
+  assert.deepEqual(wh(ctx.parseImageHeader(jpegWithSOF(4032, 3024, 1))), { w: 4032, h: 3024 }, 'Orientation=1 不对调');
+  assert.deepEqual(wh(ctx.parseImageHeader(jpegWithSOF(4032, 3024, 6))), { w: 3024, h: 4032 }, 'Orientation=6 应对调宽高');
+  assert.deepEqual(wh(ctx.parseImageHeader(pngIHDR(1170, 2532))), { w: 1170, h: 2532 });
   const gif = new Uint8Array(32); gif.set([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0xE0, 0x01, 0x40, 0x01]);
-  assert.deepEqual(plain(ctx.parseImageHeader(gif.buffer)), { w: 480, h: 320 });
+  assert.deepEqual(wh(ctx.parseImageHeader(gif.buffer)), { w: 480, h: 320 });
   const webp = new Uint8Array(40);
   webp.set([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58]);   // RIFF....WEBPVP8X
   webp.set([0xFF, 0x03, 0x00, 0x2F, 0x04, 0x00], 24);   // w-1 = 1023, h-1 = 1071
-  assert.deepEqual(plain(ctx.parseImageHeader(webp.buffer)), { w: 1024, h: 1072 });
+  assert.deepEqual(wh(ctx.parseImageHeader(webp.buffer)), { w: 1024, h: 1072 });
   assert.equal(ctx.parseImageHeader(new Uint8Array(10).buffer), null, '太短的文件返回 null');
   assert.equal(ctx.parseImageHeader(new Uint8Array(64).buffer), null, '未知格式返回 null');
+});
+
+// ---------- 4b. EXIF ----------
+function jpegWithExif(le) {
+  // TIFF：IFD0 有 Make / Model / Orientation / ExifIFD 指针；ExifIFD 有 DateTimeOriginal / ExposureTime / FNumber / ISO / FocalLength
+  const buf = new ArrayBuffer(400);
+  const d = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  let o = 0;
+  const w16 = (v) => { d.setUint16(o, v, le); o += 2; };
+  const w32 = (v) => { d.setUint32(o, v, le); o += 4; };
+  const str = (at, text) => { for (let i = 0; i < text.length; i++) u8[at + i] = text.charCodeAt(i); };
+  u8.set(le ? [0x49, 0x49, 0x2A, 0x00] : [0x4D, 0x4D, 0x00, 0x2A], 0); o = 4; w32(8);
+  // IFD0 @8：4 entries
+  o = 8; w16(4);
+  const entry = (tag, type, cnt, val) => { w16(tag); w16(type); w32(cnt); if (typeof val === 'function') val(); else w32(val); };
+  entry(0x010F, 2, 6, 100);                 // Make -> @100 'Apple\0'
+  entry(0x0110, 2, 14, 110);                // Model -> @110 'iPhone 15 Pro\0'
+  entry(0x0112, 3, 1, () => { w16(6); w16(0); });   // Orientation = 6
+  entry(0x8769, 4, 1, 130);                 // ExifIFD @130
+  w32(0);
+  str(100, 'Apple\0'); str(110, 'iPhone 15 Pro\0');
+  o = 130; w16(5);
+  entry(0x9003, 2, 20, 200);                // DateTimeOriginal @200
+  entry(0x829A, 5, 1, 230);                 // ExposureTime @230 = 1/1250
+  entry(0x829D, 5, 1, 238);                 // FNumber @238 = 178/100
+  entry(0x8827, 3, 1, () => { w16(64); w16(0); });   // ISO 64
+  entry(0x920A, 5, 1, 246);                 // FocalLength @246 = 6.86
+  w32(0);
+  str(200, '2026:08:12 10:31:05\0');
+  o = 230; w32(1); w32(1250); w32(178); w32(100); w32(686); w32(100);
+  const tiff = u8.slice(0, 260);
+  const payload = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00, ...tiff];
+  const len = payload.length + 2;
+  const bytes = [0xFF, 0xD8, 0xFF, 0xE1, len >> 8, len & 0xFF, ...payload,
+                 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x0B, 0xD0, 0x0F, 0xC0, 0x03, 0,0,0, 0,0,0, 0,0,0, 0xFF, 0xDA];
+  return new Uint8Array(bytes).buffer;
+}
+test('parseExifTiff 解析相机、拍摄时间、曝光参数（大端与小端）并对调方向 6 的宽高', () => {
+  const ctx = loadFunctions(['parseImageHeader', 'parseExifTiff', 'exifDateToMs']);
+  for (const le of [true, false]) {
+    const r = ctx.parseImageHeader(jpegWithExif(le));
+    assert.deepEqual(wh(r), { w: 3024, h: 4032 }, `${le ? '小端' : '大端'}：Orientation=6 宽高对调`);
+    const ex = plain(r.exif);
+    assert.equal(ex.make, 'Apple');
+    assert.equal(ex.model, 'iPhone 15 Pro');
+    assert.equal(ex.orientation, 6);
+    assert.equal(ex.taken, '2026:08:12 10:31:05');
+    assert.equal(ex.exposure, 1 / 1250);
+    assert.equal(ex.fnumber, 1.78);
+    assert.equal(ex.iso, 64);
+    assert.equal(ex.focal, 6.86);
+    assert.equal(ex.lens, undefined, '没写的 tag 不应出现');
+  }
+  assert.equal(ctx.exifDateToMs('2026:08:12 10:31:05'), new Date(2026, 7, 12, 10, 31, 5).getTime());
+  assert.equal(ctx.exifDateToMs('0000:00:00 00:00:00'), null, '相机未设时间的占位值应返回 null');
+  assert.equal(ctx.exifDateToMs(undefined), null);
+});
+
+test('sortGroup 支持按拍摄时间排序，无 EXIF 时回退修改时间', () => {
+  const ctx = loadFunctions(['sortGroup'], { sortKeySel: { value: 'taken' }, sortDir: 1 });
+  const a = { name: 'a', mtime: 300, _taken: 100 }, b = { name: 'b', mtime: 200 }, c = { name: 'c', mtime: 50, _taken: 400 };
+  assert.deepEqual(ctx.sortGroup([a, b, c]).map(x => x.name), ['a', 'b', 'c']);
 });
 
 // ---------- 5. 统计文案 ----------
@@ -134,7 +200,15 @@ test('扫描、卡片、播放器与 Feed 都按 kind 分流', () => {
   assert.match(scriptCode, /createImageBitmap\(file, \{ resizeWidth: 320/, '图片缩略图应走 createImageBitmap 缩放');
   assert.match(scriptCode, /imageOrientation: 'from-image'/, '缩略图应按 EXIF 方向转正');
   assert.match(scriptCode, /const IMAGE_DECODE_LIMIT = 4;/, '图片解码应有并发闸门');
-  assert.match(scriptCode, /const videosOnly = filtered\.filter\(v => !isImage\(v\)\);/, 'Feed 暂只接视频');
+  assert.match(scriptCode, /const playable = filtered\.filter\(isNativeMedia\);/, 'Feed 只带可打开的视频与图片');
+  assert.match(scriptCode, /function buildFeedImageSlide\(/, 'Feed 应有图片幻灯片');
+  assert.match(scriptCode, /function startSlideshow\(/, '查看器应有幻灯放映');
+  assert.match(scriptCode, /modalVideo\.addEventListener\('ended'/, '幻灯放映遇到视频应等 ended');
+  assert.match(scriptCode, /function useMasonry\(/, '图片模式应支持瀑布流');
+  assert.match(scriptCode, /HUGE_IMAGE_PIXELS = 40e6/, '超大图应降级显示');
+  assert.match(htmlContent, /<option value="taken">按拍摄时间<\/option>/, '排序应有「按拍摄时间」');
+  assert.match(htmlContent, /id=["']btn-layout["']/, '应有瀑布流切换按钮');
+  assert.match(htmlContent, /id=["']image-play-btn["']/, '应有幻灯放映按钮');
   assert.match(scriptCode, /while \(next >= 0 && next < filtered\.length && !isNativeMedia\(filtered\[next\]\)\) next \+= delta;/, '翻页应跳过不可解码格式');
   assert.match(scriptCode, /mediaMode:\$\{/, '媒体模式应按目录持久化');
 });

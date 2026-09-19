@@ -1035,6 +1035,27 @@
     gap: 16px;
     margin-bottom: 30px;
   }
+  /* 瀑布流（仅图片模式）：纯 CSS 多列，卡片按原始比例排布 */
+  .section-grid.masonry {
+    display: block;
+    column-width: 230px;
+    column-gap: 16px;
+  }
+  .section-grid.masonry .card {
+    break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+    margin: 0 0 16px;
+    vertical-align: top;
+  }
+  .section-grid.masonry .thumb-wrap { aspect-ratio: auto; }
+  .section-grid.masonry .thumb-wrap:not(:has(img)) { aspect-ratio: 16 / 9; }
+  .section-grid.masonry .thumb-wrap img { height: auto; }
+  .btn-normal.is-on {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 
   /* 视频卡片 */
   .card {
@@ -1300,6 +1321,46 @@
     background: #000;
     object-fit: contain;
   }
+  /* 图片幻灯片：同图高斯模糊铺底，避免竖图两侧死黑；顶部细条是停留进度 */
+  .feed-slide .feed-bg {
+    position: absolute;
+    inset: -40px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.45);
+    pointer-events: none;
+  }
+  .feed-slide img.feed-image {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .feed-slide .feed-dwell {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    z-index: 2;
+  }
+  .feed-slide .feed-dwell i { display: block; height: 100%; width: 0; background: #fff; }
+  .feed-slide.is-image.active .feed-dwell i { animation: dwellFill var(--feed-dwell, 5s) linear forwards; }
+  .feed-slide.is-image.paused .feed-dwell i { animation-play-state: paused; }
+  @keyframes dwellFill { from { width: 0; } to { width: 100%; } }
+  .feed-slide .feed-kind {
+    display: inline-block;
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    background: var(--secondary-accent);
+  }
+  .feed-hud button:disabled { opacity: 0.35; cursor: default; transform: none; }
+  .feed-hud button:disabled:hover { background: rgba(30, 25, 20, 0.55); transform: none; }
   .feed-slide .feed-gradient {
     position: absolute;
     left: 0; right: 0; bottom: 0;
@@ -1666,6 +1727,21 @@
     box-shadow: var(--shadow-lg);
   }
   #modal.is-image.show-info .image-panel { display: block; }
+
+  /* 幻灯放映：顶部 3px 焦糖进度条，只在图片停留时走动 */
+  #modal .slideshow-progress {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.15);
+    display: none;
+    z-index: 107;
+  }
+  #modal .slideshow-progress i { display: block; height: 100%; width: 0; background: var(--accent); }
+  #modal.slideshow .slideshow-progress { display: block; }
+  #modal.slideshow.is-image .slideshow-progress i { animation: dwellFill var(--slide-dwell, 4s) linear forwards; }
+  #modal .image-tools button.on { background: rgba(224, 122, 95, 0.85); }
+  #modal .image-panel dd.exif-empty { opacity: 0.55; }
   #modal .image-panel h4 { margin: 0 0 12px; font-size: 11.5px; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.6; }
   #modal .image-panel dl { display: grid; grid-template-columns: 74px 1fr; gap: 8px 10px; margin: 0 0 20px; }
   #modal .image-panel dt { opacity: 0.55; }
@@ -2370,6 +2446,7 @@
         <button type="button" data-mode="video">🎬 视频 <span class="n" id="media-n-video"></span></button>
         <button type="button" data-mode="image">🖼 图片 <span class="n" id="media-n-image"></span></button>
       </div>
+      <button id="btn-layout" class="btn-normal" style="display:none;" title="瀑布流：按原始比例排布（仅图片模式）">▦ 瀑布流</button>
 
       <button id="btn-refresh" class="icon-btn" disabled title="刷新当前目录 (R)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2381,6 +2458,7 @@
         <option value="name">按文件名</option>
         <option value="date">按修改时间</option>
         <option value="size">按文件大小</option>
+        <option value="taken">按拍摄时间</option>
       </select>
       <button id="sort-dir" class="btn-normal" disabled title="切换升序/降序">↑</button>
       <label class="checkbox">
@@ -2457,6 +2535,7 @@
 
 <!-- 弹窗播放器 -->
 <div id="modal">
+  <div class="slideshow-progress" id="slideshow-progress"><i></i></div>
   <div class="modal-controls">
     <button id="modal-source" style="display:none;" title="打开原链接">🔗 原链接</button>
     <button id="modal-glean" style="display:none;" title="发送到拾光笺转写 / 查看转写 (G)">📝 拾光笺</button>
@@ -2484,6 +2563,8 @@
     <button type="button" data-act="fit" title="适应窗口 (0)">适应</button>
     <button type="button" data-act="one" title="原始像素 (1)">1:1</button>
     <button type="button" data-act="rot" title="顺时针旋转 90° (R)">↻</button>
+    <span class="sep"></span>
+    <button type="button" data-act="play" id="image-play-btn" title="幻灯放映 (Space)">▶ 幻灯</button>
   </div>
   <div class="image-strip" id="image-strip"></div>
   <aside class="image-panel" id="image-panel"></aside>
@@ -2690,6 +2771,14 @@
   const imageStrip = $('image-strip');
   const imagePanel = $('image-panel');
   let mediaMode = 'all';   // 'all' | 'video' | 'image'，按目录记忆在 IDB kv
+  let imageLayout = 'grid'; // 'grid' | 'masonry'（仅图片模式），同样按目录记忆
+  const btnLayout = $('btn-layout');
+  const imagePlayBtn = $('image-play-btn');
+  const slideshowProgress = $('slideshow-progress');
+  const SLIDESHOW_DWELL = 4000;     // 查看器幻灯：每张图片停留
+  const FEED_IMAGE_DWELL = 5000;    // Feed：图片停留
+  const HUGE_IMAGE_PIXELS = 40e6;   // 超过 40 MP 的图不直接喂 <img>，先缩到 4096px
+  const HUGE_IMAGE_MAX_W = 4096;
 
   const SPEED_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   let modalHudTimer = null;
@@ -3992,9 +4081,11 @@
 
   // ---------- 媒体类型分段器（全部 / 视频 / 图片），按目录记忆 ----------
   async function restoreMediaMode(folderId) {
-    let saved = null;
+    let saved = null, savedLayout = null;
     try { saved = await idbGet(`mediaMode:${folderId}`); } catch {}
+    try { savedLayout = await idbGet(`imageLayout:${folderId}`); } catch {}
     mediaMode = MEDIA_MODES.includes(saved) ? saved : 'all';
+    imageLayout = savedLayout === 'masonry' ? 'masonry' : 'grid';
     // 目录里没有该类型时，回到「全部」，避免面对空网格
     const c = countByKind(allVideos);
     if ((mediaMode === 'image' && !c.image) || (mediaMode === 'video' && !c.video)) mediaMode = 'all';
@@ -4021,11 +4112,19 @@
       b.classList.toggle('on', m === mediaMode);
       b.disabled = (m === 'video' && !c.video) || (m === 'image' && !c.image);
     });
-    // Feed 目前只刷视频；图片幻灯片在下一阶段接入
     btnFeed.textContent = mediaMode === 'video' ? '🔀 刷视频' : mediaMode === 'image' ? '🔀 刷图片' : '🔀 刷一刷';
-    btnFeed.disabled = !allVideos.length || !c.video || mediaMode === 'image';
-    btnFeed.title = mediaMode === 'image' ? '图片幻灯片即将支持' : '沉浸式竖屏刷视频';
+    btnFeed.disabled = !mediaBase().some(isNativeMedia);
+    btnFeed.title = mediaMode === 'image' ? '沉浸式竖屏看图（每张停留 5 秒）' : '沉浸式竖屏刷视频 / 看图';
+    btnLayout.style.display = mediaMode === 'image' ? '' : 'none';
+    btnLayout.textContent = imageLayout === 'masonry' ? '▤ 网格' : '▦ 瀑布流';
+    btnLayout.classList.toggle('is-on', imageLayout === 'masonry');
   }
+  function useMasonry() { return mediaMode === 'image' && imageLayout === 'masonry'; }
+  btnLayout.addEventListener('click', () => {
+    imageLayout = imageLayout === 'masonry' ? 'grid' : 'masonry';
+    if (activeFolderId) idbSet(`imageLayout:${activeFolderId}`, imageLayout).catch(() => {});
+    render();
+  });
   mediaSeg.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-mode]');
     if (!b || b.disabled) return;
@@ -4121,6 +4220,7 @@
       let r;
       if (key === 'name') r = a.name.localeCompare(b.name, 'zh');
       else if (key === 'date') r = a.mtime - b.mtime;
+      else if (key === 'taken') r = (a._taken || a.mtime) - (b._taken || b.mtime);   // 无 EXIF 时回退修改时间
       else r = a.size - b.size;
       return r * sortDir;
     });
@@ -4612,7 +4712,7 @@
           gridEl.appendChild(header);
         }
         sectionGrid = document.createElement('div');
-        sectionGrid.className = 'section-grid';
+        sectionGrid.className = 'section-grid' + (useMasonry() ? ' masonry' : '');
         gridEl.appendChild(sectionGrid);
         groupSectionMap.set(groupName, sectionGrid);
       }
@@ -4699,6 +4799,28 @@
 
     // 首屏快速挂载首批（60 个）
     renderNextChunk();
+
+    if (sortKeySel.value === 'taken') ensureTakenTimes();
+  }
+
+  // 「按拍摄时间」：一次性把还没读过 EXIF 的 JPEG 文件头读完，再整体重排一次（不在浏览途中逐张挪动卡片）
+  let takenScanToken = 0;
+  async function ensureTakenTimes() {
+    const pending = allVideos.filter(v => isImage(v) && !v._exifRead && (v.ext === 'jpg' || v.ext === 'jpeg'));
+    if (!pending.length) return;
+    const token = ++takenScanToken;
+    const folderId = activeFolderId;
+    setStatus(`正在读取 ${pending.length} 张照片的拍摄时间…`);
+    let i = 0;
+    const worker = async () => {
+      while (i < pending.length && token === takenScanToken) {
+        await readImageDimensions(pending[i++]);
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
+    if (token !== takenScanToken || folderId !== activeFolderId) return;
+    setStatus('');
+    if (sortKeySel.value === 'taken') render();
   }
 
   function buildCard(v, idx) {
@@ -4837,6 +4959,7 @@
     card.appendChild(body);
 
     card._thumbWrap = thumbWrap;
+    card._thumbVariant = (img && useMasonry()) ? 'natural' : 'cover';
     card._placeholder = placeholder;
     card._durBadge = durBadge;
     card._video = v;
@@ -4925,7 +5048,7 @@
     }
     // JPEG：逐段扫描，APP1 里取 Orientation，SOFn 里取尺寸
     if (b0 === 0xFF && b1 === 0xD8) {
-      let off = 2, orientation = 1, dims = null;
+      let off = 2, orientation = 1, dims = null, exif = null;
       while (off + 4 <= n) {
         if (d.getUint8(off) !== 0xFF) { off++; continue; }
         const marker = d.getUint8(off + 1);
@@ -4935,15 +5058,8 @@
         if (len < 2) break;
         if (marker === 0xE1 && off + 10 <= n && d.getUint32(off + 4) === 0x45786966) {  // 'Exif'
           try {
-            const t = off + 10;
-            const le = d.getUint16(t) === 0x4949;
-            const ifd = t + d.getUint32(t + 4, le);
-            const cnt = d.getUint16(ifd, le);
-            for (let i = 0; i < cnt; i++) {
-              const e = ifd + 2 + i * 12;
-              if (e + 12 > n) break;
-              if (d.getUint16(e, le) === 0x0112) { orientation = d.getUint16(e + 8, le); break; }
-            }
+            exif = parseExifTiff(d, off + 10, n);
+            if (exif && exif.orientation) orientation = exif.orientation;
           } catch {}
         }
         const isSOF = (marker >= 0xC0 && marker <= 0xCF) && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC;
@@ -4953,24 +5069,96 @@
         }
         off += 2 + len;
       }
-      if (!dims) return null;
-      return orientation >= 5 ? { w: dims.h, h: dims.w } : dims;
+      if (!dims && !exif) return null;
+      const out = dims ? (orientation >= 5 ? { w: dims.h, h: dims.w } : dims) : { w: 0, h: 0 };
+      if (exif && Object.keys(exif).length) out.exif = exif;
+      return out;
     }
     return null;
   }
 
+  // 解析 TIFF/EXIF：只取 IFD0 的相机型号 / 方向，与 ExifIFD 的拍摄时间、曝光、光圈、ISO、焦距、镜头；不读 GPS
+  const EXIF_IFD0_TAGS = { 0x010F: 'make', 0x0110: 'model', 0x0112: 'orientation', 0x8769: 'exifIfd' };
+  const EXIF_SUB_TAGS = { 0x9003: 'taken', 0x829A: 'exposure', 0x829D: 'fnumber', 0x8827: 'iso', 0x920A: 'focal', 0xA405: 'focal35', 0xA434: 'lens' };
+  function parseExifTiff(d, t, n) {
+    const le = d.getUint16(t) === 0x4949;
+    const u16 = (o) => d.getUint16(o, le);
+    const u32 = (o) => d.getUint32(o, le);
+    const out = {};
+    const readValue = (e) => {
+      const type = u16(e + 2), cnt = u32(e + 4);
+      const inline = (type === 3 && cnt <= 2) || (type === 4 && cnt <= 1) || (type === 2 && cnt <= 4);
+      const at = inline ? e + 8 : t + u32(e + 8);
+      if (type === 3) return u16(at);
+      if (type === 4) return u32(at);
+      if (type === 5) { const a = u32(at), b = u32(at + 4); return b ? a / b : null; }
+      if (type === 2) {
+        let str = '';
+        for (let i = 0; i < cnt - 1 && at + i < n; i++) { const c = d.getUint8(at + i); if (!c) break; str += String.fromCharCode(c); }
+        return str.trim();
+      }
+      return null;
+    };
+    const walkIfd = (ifd, tags) => {
+      if (ifd + 2 > n) return;
+      const cnt = u16(ifd);
+      for (let i = 0; i < cnt; i++) {
+        const e = ifd + 2 + i * 12;
+        if (e + 12 > n) break;
+        const name = tags[u16(e)];
+        if (!name) continue;
+        try { const val = readValue(e); if (val != null && val !== '') out[name] = val; } catch {}
+      }
+    };
+    walkIfd(t + u32(t + 4), EXIF_IFD0_TAGS);
+    if (out.exifIfd) { walkIfd(t + out.exifIfd, EXIF_SUB_TAGS); delete out.exifIfd; }
+    return out;
+  }
+  // 'YYYY:MM:DD HH:MM:SS' → 时间戳；无效返回 null
+  function exifDateToMs(str) {
+    const m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(str || ''));
+    if (!m) return null;
+    const ts = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+    return isFinite(ts) && ts > 0 ? ts : null;
+  }
+  function applyExif(v, exif) {
+    if (!exif) return;
+    v._exif = exif;
+    const ts = exifDateToMs(exif.taken);
+    if (ts) v._taken = ts;
+  }
+
   async function readImageDimensions(v) {
-    if (v._w && v._h) return;
+    if (v._exifRead && v._w && v._h) return;
     try {
       const file = await v.handle.getFile();
       const buf = await file.slice(0, 256 * 1024).arrayBuffer();
       const r = parseImageHeader(buf);
       if (r && r.w > 0 && r.h > 0) { v._w = r.w; v._h = r.h; }
+      if (r && r.exif) applyExif(v, r.exif);
     } catch {}
+    v._exifRead = true;
   }
 
-  // 图片缩略图：createImageBitmap 按 EXIF 方向转正并缩放到 320 宽，再 cover 绘到 320×180
-  async function extractImageThumbnail(v) {
+  // 超大图（> 40 MP）先用位图缩到 4096 宽再显示，避免 <img> 解码几百 MB 的位图；其余原样返回 objectURL
+  async function displayUrlFor(v, file, url) {
+    if (!(v._w && v._h && v._w * v._h > HUGE_IMAGE_PIXELS)) return { url, scaled: false };
+    try {
+      const bmp = await createImageBitmap(file, { resizeWidth: HUGE_IMAGE_MAX_W, resizeQuality: 'high', imageOrientation: 'from-image' });
+      const canvas = document.createElement('canvas');
+      canvas.width = bmp.width;
+      canvas.height = bmp.height;
+      canvas.getContext('2d').drawImage(bmp, 0, 0);
+      bmp.close();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      if (blob) return { url: URL.createObjectURL(blob), scaled: true };
+    } catch {}
+    return { url, scaled: false };
+  }
+
+  // 图片缩略图：createImageBitmap 按 EXIF 方向转正并缩放到 320 宽；
+  // cover 变体绘到 320×180（网格），natural 变体保留原始比例（瀑布流，最高 3:1 截断）
+  async function extractImageThumbnail(v, variant = 'cover') {
     const file = await v.handle.getFile();
     let bmp = null;
     try {
@@ -4989,14 +5177,23 @@
     const sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
     if (!sw || !sh) return null;
     const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 180;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#23201D';
-    ctx.fillRect(0, 0, 320, 180);
-    const scale = Math.max(320 / sw, 180 / sh);
-    const dw = sw * scale, dh = sh * scale;
-    ctx.drawImage(bmp, (320 - dw) / 2, (180 - dh) / 2, dw, dh);
+    if (variant === 'natural') {
+      const dh = Math.round(320 * sh / sw);
+      canvas.width = 320;
+      canvas.height = Math.min(dh, 960);
+      ctx.fillStyle = '#23201D';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bmp, 0, 0, 320, dh);   // 超长图从顶部截断
+    } else {
+      canvas.width = 320;
+      canvas.height = 180;
+      ctx.fillStyle = '#23201D';
+      ctx.fillRect(0, 0, 320, 180);
+      const scale = Math.max(320 / sw, 180 / sh);
+      const dw = sw * scale, dh = sh * scale;
+      ctx.drawImage(bmp, (320 - dw) / 2, (180 - dh) / 2, dw, dh);
+    }
     if (typeof bmp.close === 'function') bmp.close();
     // 文件头没解析出尺寸时（如 SVG），退而用解码结果
     if (!v._w && !(bmp instanceof ImageBitmap)) { v._w = sw; v._h = sh; }
@@ -5004,11 +5201,13 @@
   }
 
   // 离屏提取海报与时长 / 图片缩略图与尺寸 (带 IndexedDB 持久化缓存池)
-  function ensureThumbnail(v) {
-    if (v._thumbPromise) return v._thumbPromise;
-    v._thumbPromise = (async () => {
+  function ensureThumbnail(v, variant = 'cover') {
+    const natural = variant === 'natural' && isImage(v);
+    const slot = natural ? '_thumbPromiseNatural' : '_thumbPromise';
+    if (v[slot]) return v[slot];
+    v[slot] = (async () => {
       if (!isNativeMedia(v)) return null;
-      const cacheKey = getThumbnailCacheKey(v);
+      const cacheKey = getThumbnailCacheKey(v) + (natural ? ':natural' : '');
 
       // 1. 优先尝试从 IndexedDB 读取持久化缓存 (0ms 纯本地秒开)
       try {
@@ -5016,6 +5215,7 @@
         if (cached && cached.dataUrl) {
           if (cached.duration && !v._duration) v._duration = cached.duration;
           if (cached.w && cached.h && !v._w) { v._w = cached.w; v._h = cached.h; }
+          if (isImage(v) && !v._exifRead && (cached.exif || cached.exifRead)) { applyExif(v, cached.exif); v._exifRead = true; }
           return cached.dataUrl;
         }
       } catch {}
@@ -5024,8 +5224,8 @@
       if (isImage(v)) {
         try {
           await readImageDimensions(v);
-          const dataUrl = await withImageDecodeSlot(() => extractImageThumbnail(v));
-          if (dataUrl) idbSetThumbnail(cacheKey, { dataUrl, w: v._w, h: v._h, cachedAt: Date.now() });
+          const dataUrl = await withImageDecodeSlot(() => extractImageThumbnail(v, natural ? 'natural' : 'cover'));
+          if (dataUrl) idbSetThumbnail(cacheKey, { dataUrl, w: v._w, h: v._h, exif: v._exif || null, exifRead: true, cachedAt: Date.now() });
           else v._thumbError = true;
           return dataUrl;
         } catch {
@@ -5086,12 +5286,12 @@
         }
       });
     })();
-    return v._thumbPromise;
+    return v[slot];
   }
 
   async function generateThumbnail(card) {
     const v = card._video;
-    const dataUrl = await ensureThumbnail(v);
+    const dataUrl = await ensureThumbnail(v, card._thumbVariant || 'cover');
     if (isImage(v)) {
       if (v._w && v._h) {
         card._durBadge.textContent = `${v._w}×${v._h}`;
@@ -5123,7 +5323,102 @@
     return a;
   }
 
+  // 图片幻灯片：定时停留一帧，点一下暂停 / 继续，手动滚动即取消计时
+  function buildFeedImageSlide(v, idx) {
+    const slide = document.createElement('div');
+    slide.className = 'feed-slide is-image';
+    slide.dataset.idx = idx;
+    slide.style.setProperty('--feed-dwell', `${FEED_IMAGE_DWELL}ms`);
+
+    const bg = document.createElement('div');
+    bg.className = 'feed-bg';
+    const img = document.createElement('img');
+    img.className = 'feed-image';
+    img.alt = v.name;
+    img.draggable = false;
+    img.decoding = 'async';
+
+    const dwell = document.createElement('div');
+    dwell.className = 'feed-dwell';
+    dwell.innerHTML = '<i></i>';
+
+    const gradient = document.createElement('div');
+    gradient.className = 'feed-gradient';
+
+    const info = document.createElement('div');
+    info.className = 'feed-info';
+    const kind = document.createElement('span');
+    kind.className = 'feed-kind';
+    kind.textContent = `🖼 图片 · 停留 ${FEED_IMAGE_DWELL / 1000} 秒`;
+    const fname = document.createElement('div');
+    fname.className = 'fname';
+    fname.textContent = v.name;
+    fname.title = v.name;
+    const fpath = document.createElement('div');
+    fpath.className = 'fpath';
+    fpath.textContent = `${v.path ? v.path + '/' : ''}${fmtSize(v.size)}`;
+    info.appendChild(kind);
+    info.appendChild(fname);
+    info.appendChild(fpath);
+
+    const pauseIcon = document.createElement('div');
+    pauseIcon.className = 'pause-icon';
+    pauseIcon.textContent = '⏸';
+
+    slide.appendChild(bg);
+    slide.appendChild(img);
+    slide.appendChild(dwell);
+    slide.appendChild(gradient);
+    slide.appendChild(info);
+    slide.appendChild(pauseIcon);
+
+    slide.addEventListener('click', () => {
+      if (!slide.classList.contains('active')) return;
+      if (slide.classList.contains('paused')) resumeFeedDwell(slide);
+      else pauseFeedDwell(slide);
+    });
+
+    slide._video = null;
+    slide._image = img;
+    slide._bg = bg;
+    slide._srcVideo = v;
+    return slide;
+  }
+
+  function startFeedDwell(slide) {
+    stopFeedDwell(slide);
+    void slide.offsetWidth;   // 重新触发进度条动画
+    slide.classList.add('active');
+    slide._dwellRemaining = FEED_IMAGE_DWELL;
+    resumeFeedDwell(slide);
+  }
+  function resumeFeedDwell(slide) {
+    clearTimeout(slide._dwellTimer);
+    slide.classList.remove('paused');
+    slide._dwellStart = performance.now();
+    slide._dwellTimer = setTimeout(() => {
+      if (feedEl.classList.contains('show') && feedEl.children[feedIndex] === slide) feedNavigate(1);
+    }, Math.max(0, slide._dwellRemaining || 0));
+  }
+  function pauseFeedDwell(slide) {
+    clearTimeout(slide._dwellTimer);
+    slide._dwellRemaining = Math.max(0, (slide._dwellRemaining || 0) - (performance.now() - (slide._dwellStart || performance.now())));
+    slide.classList.add('paused');
+  }
+  function stopFeedDwell(slide) {
+    clearTimeout(slide._dwellTimer);
+    slide.classList.remove('active', 'paused');
+  }
+  // 用户自己滚动时取消自动前进（保持暂停态，点一下继续）
+  const cancelFeedDwellOnScroll = () => {
+    const cur = feedEl.children[feedIndex];
+    if (cur && cur._image && cur.classList.contains('active') && !cur.classList.contains('paused')) pauseFeedDwell(cur);
+  };
+  feedEl.addEventListener('wheel', cancelFeedDwellOnScroll, { passive: true });
+  feedEl.addEventListener('touchstart', cancelFeedDwellOnScroll, { passive: true });
+
   function buildFeedSlide(v, idx) {
+    if (isImage(v)) return buildFeedImageSlide(v, idx);
     const slide = document.createElement('div');
     slide.className = 'feed-slide';
     slide.dataset.idx = idx;
@@ -5254,31 +5549,50 @@
     if (slide._posterLoaded) return;
     slide._posterLoaded = true;
     const dataUrl = await ensureThumbnail(slide._srcVideo);
-    if (dataUrl) slide._video.poster = dataUrl;
+    if (!dataUrl) return;
+    if (slide._image) slide._bg.style.backgroundImage = `url(${dataUrl})`;
+    else slide._video.poster = dataUrl;
   }
 
   async function loadFeedSlideSrc(slide) {
     const idx = Number(slide.dataset.idx);
-    if (feedLoaded.has(idx)) return;
+    if (feedLoaded.has(idx) || slide._loading) return;
+    slide._loading = true;
     let file;
-    try { file = await slide._srcVideo.handle.getFile(); } catch { return; }
-    const url = URL.createObjectURL(file);
-    slide._objectUrl = url;
-    slide._video.src = url;
-    slide._video.volume = getSavedVolume();
-    slide._video.preload = 'auto';
+    try { file = await slide._srcVideo.handle.getFile(); } catch { slide._loading = false; return; }
+    if (slide._image) {
+      const v = slide._srcVideo;
+      if (!v._exifRead) await readImageDimensions(v);
+      const url = URL.createObjectURL(file);
+      const disp = await displayUrlFor(v, file, url);
+      if (disp.scaled) URL.revokeObjectURL(url);
+      slide._objectUrl = disp.url;
+      slide._image.src = disp.url;
+    } else {
+      const url = URL.createObjectURL(file);
+      slide._objectUrl = url;
+      slide._video.src = url;
+      slide._video.volume = getSavedVolume();
+      slide._video.preload = 'auto';
+    }
+    slide._loading = false;
     feedLoaded.add(idx);
   }
 
   function unloadFeedSlideSrc(slide) {
     const idx = Number(slide.dataset.idx);
     if (!feedLoaded.has(idx)) return;
-    if (slide._srcVideo && slide._video.duration) {
-      savePlaybackProgress(slide._srcVideo, slide._video.currentTime, slide._video.duration);
+    if (slide._image) {
+      stopFeedDwell(slide);
+      slide._image.removeAttribute('src');
+    } else {
+      if (slide._srcVideo && slide._video.duration) {
+        savePlaybackProgress(slide._srcVideo, slide._video.currentTime, slide._video.duration);
+      }
+      slide._video.pause();
+      slide._video.removeAttribute('src');
+      slide._video.load();
     }
-    slide._video.pause();
-    slide._video.removeAttribute('src');
-    slide._video.load();
     if (slide._objectUrl) { URL.revokeObjectURL(slide._objectUrl); slide._objectUrl = null; }
     feedLoaded.delete(idx);
     slide.classList.remove('paused');
@@ -5295,10 +5609,15 @@
       feedFavBtn.classList.toggle('is-active', isFav);
     }
     updateFeedSource(curSlide ? curSlide._srcVideo : null);
+    feedMuteBtn.disabled = !!(curSlide && curSlide._image);
     for (let i = 0; i < slides.length; i++) {
       const slide = slides[i];
       if (Math.abs(i - idx) <= 1) {
         loadFeedSlideSrc(slide).then(() => {
+          if (slide._image) {
+            if (i === feedIndex && feedEl.classList.contains('show')) startFeedDwell(slide);
+            return;
+          }
           if (i === feedIndex && feedEl.classList.contains('show')) {
             slide._video.volume = getSavedVolume();
             slide._video.muted = feedMuted;
@@ -5313,7 +5632,9 @@
       } else {
         unloadFeedSlideSrc(slide);
       }
-      if (i !== idx && slide._video.src) {
+      if (i !== idx && slide._image) {
+        stopFeedDwell(slide);
+      } else if (i !== idx && slide._video && slide._video.src) {
         slide._video.pause();
         slide.classList.remove('paused');
       }
@@ -5321,11 +5642,11 @@
   }
 
   function openFeed(startIdx, opts = {}) {
-    // Feed 目前只接视频；混排列表里的图片先跳过（图片幻灯片在下一阶段接入）
-    const videosOnly = filtered.filter(v => !isImage(v));
-    if (!videosOnly.length) return;
-    feedList = opts.shuffle ? shuffleArray(videosOnly) : videosOnly;
-    feedIndex = opts.shuffle ? 0 : Math.max(0, videosOnly.indexOf(filtered[startIdx]));
+    // 只带浏览器能打开的条目进 Feed（MKV / HEIC 之类跳过）；视频与图片混排
+    const playable = filtered.filter(isNativeMedia);
+    if (!playable.length) return;
+    feedList = opts.shuffle ? shuffleArray(playable) : playable;
+    feedIndex = opts.shuffle ? 0 : Math.max(0, playable.indexOf(filtered[startIdx]));
     feedLoaded.clear();
     feedEl.innerHTML = '';
 
@@ -5383,7 +5704,7 @@
     localStorage.setItem('feedMuted', String(feedMuted));
     feedMuteBtn.textContent = feedMuted ? '🔇' : '🔊';
     const cur = feedEl.children[feedIndex];
-    if (cur) {
+    if (cur && cur._video) {
       cur._video.volume = getSavedVolume();
       cur._video.muted = feedMuted;
     }
@@ -5423,7 +5744,7 @@
     if (img) {
       modalVideo.removeAttribute('src');
       modalVideo.load();
-      showImageInStage(v, currentObjectUrl);
+      showImageInStage(v, currentObjectUrl, file);
     } else {
       clearImageStage();
       modalVideo.playbackRate = 1.0;
@@ -5483,6 +5804,7 @@
       savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
     }
     modal.classList.remove('show', 'is-image', 'show-info');
+    stopSlideshow(true);
     modalVideo.pause();
     modalVideo.removeAttribute('src');
     modalVideo.load();
@@ -5495,13 +5817,19 @@
   const IMG_ZOOM_MAX = 8;
   const imgView = { scale: 1, fit: 1, tx: 0, ty: 0, rot: 0, natW: 0, natH: 0, drag: null, loadToken: 0 };
 
-  function showImageInStage(v, url) {
+  async function showImageInStage(v, url, file) {
     const token = ++imgView.loadToken;
     modalImageStage.classList.remove('has-error');
     modalImage.classList.remove('ready');
     modalImage.style.transform = '';
-    imgView.rot = 0; imgView.natW = 0; imgView.natH = 0;
-    modalImage.src = url;
+    imgView.rot = 0; imgView.natW = 0; imgView.natH = 0; imgView.scaled = false;
+    if (imgView.displayUrl) { URL.revokeObjectURL(imgView.displayUrl); imgView.displayUrl = null; }
+    if (!v._exifRead) await readImageDimensions(v);
+    if (token !== imgView.loadToken) return;
+    const disp = await displayUrlFor(v, file, url);
+    if (token !== imgView.loadToken) { if (disp.scaled) URL.revokeObjectURL(disp.url); return; }
+    if (disp.scaled) { imgView.displayUrl = disp.url; imgView.scaled = true; }
+    modalImage.src = disp.url;
     // 先等 load，再尽量等 decode() 完成后显示（避免大图先闪一帧空白）；
     // 页面在后台时 decode() 可能一直不结算，所以给它一个上限，超时就直接显示
     const loaded = new Promise((resolve, reject) => {
@@ -5523,6 +5851,8 @@
       fitImage(imgView.natH / imgView.natW > 2.5 ? 'width' : 'all');
       modalImage.classList.add('ready');
       renderImagePanel(v);
+      if (imgView.scaled) showModalHud(`超大图已按 ${HUGE_IMAGE_MAX_W}px 缩放显示`);
+      if (slideshowOn) armSlideshow();
     }).catch(() => {
       if (token !== imgView.loadToken) return;
       modalImageStage.classList.add('has-error');
@@ -5533,6 +5863,7 @@
     imgView.loadToken++;
     modalImage.classList.remove('ready');
     modalImage.removeAttribute('src');
+    if (imgView.displayUrl) { URL.revokeObjectURL(imgView.displayUrl); imgView.displayUrl = null; }
     modalImageStage.classList.remove('has-error', 'dragging');
     imgView.drag = null;
     imageStrip.innerHTML = '';
@@ -5578,7 +5909,54 @@
     else if (act === 'fit') { fitImage('all'); showModalHud('适应窗口'); }
     else if (act === 'one') { zoomImageCenter(1 / imgView.scale); showModalHud('原始像素 100%'); }
     else if (act === 'rot') { imgView.rot = (imgView.rot + 90) % 360; fitImage('all'); showModalHud(`↻ ${imgView.rot}°`); }
+    else if (act === 'play') toggleSlideshow();
   }
+
+  // ---------- 幻灯放映：图片停留 4 秒后翻下一张，遇到视频等它播完（ended）再走 ----------
+  let slideshowOn = false;
+  let slideshowTimer = null;
+  function modalHasNext() {
+    return currentModalIndex >= 0 && filtered.slice(currentModalIndex + 1).some(isNativeMedia);
+  }
+  function toggleSlideshow() {
+    if (slideshowOn) stopSlideshow();
+    else startSlideshow();
+  }
+  function startSlideshow() {
+    if (!modal.classList.contains('show')) return;
+    slideshowOn = true;
+    modal.classList.add('slideshow');
+    imagePlayBtn.textContent = '⏸ 暂停';
+    imagePlayBtn.classList.add('on');
+    showModalHud(`▶ 幻灯放映 · 每张 ${SLIDESHOW_DWELL / 1000} 秒`);
+    armSlideshow();
+  }
+  function stopSlideshow(silent = false) {
+    const was = slideshowOn;
+    slideshowOn = false;
+    clearTimeout(slideshowTimer);
+    modal.classList.remove('slideshow');
+    imagePlayBtn.textContent = '▶ 幻灯';
+    imagePlayBtn.classList.remove('on');
+    if (was && !silent) showModalHud('⏸ 放映已停止');
+  }
+  function armSlideshow() {
+    clearTimeout(slideshowTimer);
+    if (!slideshowOn) return;
+    const v = filtered[currentModalIndex];
+    if (!v || !isImage(v)) return;   // 视频：等 ended 事件
+    slideshowProgress.innerHTML = '<i></i>';   // 重建节点让进度动画从头走
+    slideshowTimer = setTimeout(() => {
+      if (!slideshowOn) return;
+      if (!modalHasNext()) { stopSlideshow(true); showModalHud('放映结束'); return; }
+      navigate(1);
+    }, SLIDESHOW_DWELL);
+  }
+  modalVideo.addEventListener('ended', () => {
+    if (!slideshowOn) return;
+    if (modalHasNext()) navigate(1);
+    else { stopSlideshow(true); showModalHud('放映结束'); }
+  });
   imageTools.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-act]');
     if (b) imageToolAction(b.dataset.act);
@@ -5642,8 +6020,25 @@
       ['大小', fmtSize(v.size)],
       ['修改时间', fmtDate(v.mtime)],
     ];
-    imagePanel.innerHTML = `<h4>文件</h4><dl>${rows.map(([k, val]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(val))}</dd>`).join('')}</dl>` +
-      `<div class="panel-note">滚轮缩放 · 拖拽平移 · 双击在「适应」与 2× 间切换 · R 旋转 · 0 适应 · 1 原始像素</div>`;
+    const dl = (list) => `<dl>${list.map(([k, val]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(val))}</dd>`).join('')}</dl>`;
+    const ex = v._exif;
+    let exifHtml;
+    if (ex && (ex.model || ex.taken || ex.exposure || ex.fnumber || ex.iso || ex.focal)) {
+      const exRows = [];
+      const cam = [ex.make, ex.model].filter(Boolean).join(' ').replace(/^(\S+)\s+\1\b/, '$1');
+      if (cam) exRows.push(['相机', cam]);
+      if (ex.lens) exRows.push(['镜头', ex.lens]);
+      else if (ex.focal) exRows.push(['焦距', `${Math.round(ex.focal * 10) / 10}mm${ex.focal35 ? `（等效 ${ex.focal35}mm）` : ''}`]);
+      if (ex.fnumber) exRows.push(['光圈', `f/${Math.round(ex.fnumber * 10) / 10}`]);
+      if (ex.exposure) exRows.push(['快门', ex.exposure < 1 ? `1/${Math.round(1 / ex.exposure)} s` : `${Math.round(ex.exposure * 10) / 10} s`]);
+      if (ex.iso) exRows.push(['ISO', ex.iso]);
+      if (v._taken) exRows.push(['拍摄时间', fmtDate(v._taken)]);
+      exifHtml = `<h4>EXIF</h4>${dl(exRows)}`;
+    } else {
+      exifHtml = `<h4>EXIF</h4><div class="panel-note" style="margin-bottom:20px;">${v._exifRead ? '这张图没有 EXIF 信息（截图 / 导出图通常没有）。' : '读取中…'}</div>`;
+    }
+    imagePanel.innerHTML = `<h4>文件</h4>${dl(rows)}${exifHtml}` +
+      `<div class="panel-note">滚轮缩放 · 拖拽平移 · 双击在「适应」与 2× 间切换 · R 旋转 · 0 适应 · 1 原始像素 · Space 幻灯</div>`;
   }
 
   // 上一个 / 下一个：跳过浏览器打不开的格式（MKV、HEIC…），不在翻页途中弹拦截提示
@@ -5799,7 +6194,8 @@
         if (k === '1') { e.preventDefault(); imageToolAction('one'); return; }
         if (k.toLowerCase() === 'r') { e.preventDefault(); imageToolAction('rot'); return; }
         if (k.toLowerCase() === 'i') { e.preventDefault(); modal.classList.toggle('show-info'); return; }
-        if (k === ' ' || k === 'ArrowUp' || k === 'ArrowDown' || k === '[' || k === ']' || k === '【' || k === '】') { e.preventDefault(); return; }
+        if (k === ' ') { e.preventDefault(); toggleSlideshow(); return; }
+        if (k === 'ArrowUp' || k === 'ArrowDown' || k === '[' || k === ']' || k === '【' || k === '】') { e.preventDefault(); return; }
       }
       if (e.key === 'Escape') {
         closeModal();
@@ -5820,7 +6216,11 @@
         }
       } else if (e.key === ' ') {
         e.preventDefault();
-        if (modalVideo.paused) {
+        if (slideshowOn) {
+          // 幻灯放映途中在视频上按空格：停止放映并暂停视频（用户意图是“停下来”）
+          stopSlideshow();
+          modalVideo.pause();
+        } else if (modalVideo.paused) {
           modalVideo.play().catch(() => {});
           showModalHud('▶ 播放');
         } else {
