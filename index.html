@@ -792,6 +792,42 @@
   }
   .search-wrap input::placeholder { color: var(--text-light); }
 
+  /* 媒体类型分段器：全部 / 视频 / 图片，与搜索框同级（都是对当前抽屉的过滤） */
+  .media-seg {
+    display: inline-flex;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+  }
+  .media-seg button {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+  }
+  .media-seg button .n { font-size: 11px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+  .media-seg button:hover:not(:disabled) { color: var(--text-main); }
+  .media-seg button.on {
+    background: var(--bg-surface);
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+  }
+  .media-seg button.on[data-mode="video"] { color: var(--accent); }
+  .media-seg button.on[data-mode="image"] { color: var(--secondary-accent); }
+  .media-seg button:disabled { opacity: 0.4; cursor: default; }
+  .media-seg.is-disabled { opacity: 0.45; pointer-events: none; }
+
   select, .btn-normal {
     font-family: inherit;
     font-size: 13px;
@@ -1071,6 +1107,39 @@
     color: #fff;
     font-size: 9.5px;
     letter-spacing: 0.3px;
+  }
+  /* 图片卡片：角标用鼠尾草绿区分媒体类型，其余布局与视频卡片完全对齐 */
+  .ext-badge.image {
+    background: rgba(107, 142, 124, 0.9);
+    color: #fff;
+  }
+  .card.is-image:hover { border-color: var(--secondary-accent); }
+  .card.is-image .thumb-wrap { background: #23201D; }
+  .thumb-wrap .placeholder.image-error { color: rgba(255, 180, 160, 0.7); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+  .card-open-btn {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(28, 23, 20, 0.75);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    z-index: 2;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .card:hover .card-open-btn { display: flex; }
+  .card-open-btn:hover {
+    background: var(--secondary-accent);
+    transform: scale(1.1);
   }
 
   .card-feed-btn {
@@ -1475,6 +1544,133 @@
   #modal .nav-btn:hover { background: var(--accent); }
   #modal .nav-prev { left: 24px; }
   #modal .nav-next { right: 24px; }
+
+  /* ---------- 图片查看器（与视频共用 #modal 外壳，按 .is-image 切换舞台） ---------- */
+  #modal .image-stage {
+    display: none;
+    position: relative;
+    width: 92vw;
+    height: 72vh;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    border-radius: var(--radius-md);
+  }
+  #modal.is-image .image-stage { display: block; }
+  #modal.is-image video { display: none; }
+  #modal .image-stage.dragging { cursor: grabbing; }
+  #modal .image-stage img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: 50% 50%;
+    user-select: none;
+    -webkit-user-drag: none;
+    will-change: transform;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    visibility: hidden;
+  }
+  #modal .image-stage img.ready { visibility: visible; }
+  #modal .image-stage .image-error {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: rgba(255,255,255,0.75);
+    font-size: 14px;
+  }
+  #modal .image-stage.has-error .image-error { display: flex; }
+  #modal .image-stage.has-error img { display: none; }
+
+  #modal .image-tools {
+    display: none;
+    align-items: center;
+    gap: 2px;
+    margin-top: 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: var(--radius-full);
+    padding: 4px;
+  }
+  #modal.is-image .image-tools { display: inline-flex; }
+  #modal .image-tools button {
+    background: transparent;
+    border: 0;
+    color: #fff;
+    padding: 6px 11px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.12s;
+  }
+  #modal .image-tools button:hover { background: rgba(255,255,255,0.16); }
+  #modal .image-tools .zoom-label { min-width: 52px; text-align: center; color: rgba(255,255,255,0.85); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  #modal .image-tools .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.2); margin: 0 4px; }
+
+  #modal .image-strip {
+    display: none;
+    gap: 6px;
+    max-width: 92vw;
+    overflow-x: auto;
+    padding: 4px 2px;
+    margin-top: 8px;
+    scrollbar-width: none;
+  }
+  #modal .image-strip::-webkit-scrollbar { display: none; }
+  #modal.is-image .image-strip { display: flex; }
+  #modal .image-strip .strip-item {
+    width: 56px;
+    height: 40px;
+    border-radius: 4px;
+    opacity: 0.45;
+    cursor: pointer;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+    background: #181614 center / cover no-repeat;
+    position: relative;
+    transition: opacity 0.12s;
+  }
+  #modal .image-strip .strip-item.on { opacity: 1; border-color: var(--accent); }
+  #modal .image-strip .strip-item:hover { opacity: 0.9; }
+  #modal .image-strip .strip-item.is-video::after {
+    content: "▶";
+    position: absolute;
+    right: 3px;
+    bottom: 1px;
+    font-size: 9px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  #modal.is-image .modal-info { margin-top: 8px; }
+
+  #modal .image-panel {
+    display: none;
+    position: absolute;
+    top: 64px;
+    right: 24px;
+    bottom: 24px;
+    width: 280px;
+    background: rgba(35, 30, 27, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    overflow-y: auto;
+    font-size: 12.5px;
+    color: #fff;
+    z-index: 106;
+    box-shadow: var(--shadow-lg);
+  }
+  #modal.is-image.show-info .image-panel { display: block; }
+  #modal .image-panel h4 { margin: 0 0 12px; font-size: 11.5px; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.6; }
+  #modal .image-panel dl { display: grid; grid-template-columns: 74px 1fr; gap: 8px 10px; margin: 0 0 20px; }
+  #modal .image-panel dt { opacity: 0.55; }
+  #modal .image-panel dd { margin: 0; word-break: break-all; font-variant-numeric: tabular-nums; }
+  #modal .image-panel .panel-note { font-size: 11.5px; opacity: 0.55; line-height: 1.5; }
 
   /* 侧边栏浮层提示 Tooltip (解决侧边栏折叠后溢出裁剪问题) */
   #sidebar-tooltip {
@@ -2168,6 +2364,13 @@
         <input id="search" type="text" placeholder="在当前抽屉中搜索文件名或路径…" disabled>
       </div>
 
+      <!-- 媒体类型分段器 -->
+      <div class="media-seg is-disabled" id="media-seg" title="只看视频 / 只看图片">
+        <button type="button" data-mode="all" class="on">全部 <span class="n" id="media-n-all"></span></button>
+        <button type="button" data-mode="video">🎬 视频 <span class="n" id="media-n-video"></span></button>
+        <button type="button" data-mode="image">🖼 图片 <span class="n" id="media-n-image"></span></button>
+      </div>
+
       <button id="btn-refresh" class="icon-btn" disabled title="刷新当前目录 (R)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -2259,14 +2462,31 @@
     <button id="modal-glean" style="display:none;" title="发送到拾光笺转写 / 查看转写 (G)">📝 拾光笺</button>
     <button id="modal-fav" title="星标收藏 (S)">⭐ 收藏</button>
     <button id="modal-rename" title="重命名当前视频 (F2)">✏️ 重命名</button>
-    <button id="modal-delete" class="danger" title="删除当前视频 (Delete)">🗑️ 删除</button>
+    <button id="modal-delete" class="danger" title="删除当前文件 (Delete)">🗑️ 删除</button>
+    <button id="modal-info-btn" style="display:none;" title="文件信息 (I)">ℹ 信息</button>
     <button id="modal-fullscreen" title="全屏 (F)">⛶ 全屏</button>
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
   </div>
   <button class="nav-btn nav-prev" id="nav-prev">‹</button>
   <video id="modal-video" controls autoplay></video>
+  <!-- 图片舞台：与 <video> 互斥显示 -->
+  <div id="modal-image-stage" class="image-stage">
+    <img id="modal-image" alt="" draggable="false">
+    <div class="image-error"><span style="font-size:32px;">🖼️</span><span id="modal-image-error-text">这张图片无法解码</span></div>
+  </div>
   <div id="modal-hud" class="player-hud"></div>
   <button class="nav-btn nav-next" id="nav-next">›</button>
+  <div class="image-tools" id="image-tools">
+    <button type="button" data-act="out" title="缩小 (-)">−</button>
+    <span class="zoom-label" id="image-zoom-label">100%</span>
+    <button type="button" data-act="in" title="放大 (+)">＋</button>
+    <span class="sep"></span>
+    <button type="button" data-act="fit" title="适应窗口 (0)">适应</button>
+    <button type="button" data-act="one" title="原始像素 (1)">1:1</button>
+    <button type="button" data-act="rot" title="顺时针旋转 90° (R)">↻</button>
+  </div>
+  <div class="image-strip" id="image-strip"></div>
+  <aside class="image-panel" id="image-panel"></aside>
   <div class="modal-info" id="modal-info"></div>
   <div class="modal-info modal-source-line" id="modal-source-line" style="display:none;"></div>
 </div>
@@ -2310,9 +2530,9 @@
 <div id="rename-modal" class="custom-dialog-backdrop">
   <div class="custom-dialog" style="max-width: 440px;">
     <div class="dialog-icon-wrap">✏️</div>
-    <h3>重命名视频</h3>
+    <h3 id="rename-title">重命名视频</h3>
     <div class="dialog-desc" style="margin-bottom: 12px; text-align: center;">
-      请输入新的视频文件名（无需输入扩展名）：
+      请输入新的文件名（无需输入扩展名）：
     </div>
     <div style="margin: 0 0 8px; display: flex; align-items: center; gap: 8px;">
       <input id="rename-input" class="rename-input" type="text" style="flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-size: 14px; background: var(--bg-surface); color: var(--text-main); outline: none; transition: border-color 0.15s;" placeholder="新的文件名…">
@@ -2367,6 +2587,25 @@
 (() => {
   const VIDEO_EXT = ['mp4','webm','ogg','ogv','mov','m4v','mkv','avi','wmv','flv','ts'];
   const NATIVE_PLAYABLE = ['mp4','webm','ogg','ogv','m4v','mov'];
+  // 图片：Chromium 能直接解码的进 NATIVE_VIEWABLE，其余（HEIC / RAW / PSD…）只识别、不解码，点击走拦截提示
+  const IMAGE_EXT = ['jpg','jpeg','png','gif','webp','avif','bmp','svg','ico',
+                     'heic','heif','tif','tiff','psd','raw','cr2','cr3','nef','arw','dng'];
+  const NATIVE_VIEWABLE = ['jpg','jpeg','png','gif','webp','avif','bmp','svg','ico'];
+  const MEDIA_MODES = ['all', 'video', 'image'];
+
+  function kindOf(name) {
+    const ext = String(name).split('.').pop().toLowerCase();
+    if (VIDEO_EXT.includes(ext)) return 'video';
+    if (IMAGE_EXT.includes(ext)) return 'image';
+    return null;
+  }
+  function isImage(v) { return !!v && v.kind === 'image'; }
+  // 当前浏览器能否直接播放 / 查看
+  function isNativeMedia(v) {
+    if (!v) return false;
+    return isImage(v) ? NATIVE_VIEWABLE.includes(v.ext) : NATIVE_PLAYABLE.includes(v.ext);
+  }
+  function kindLabel(v) { return isImage(v) ? '图片' : '视频'; }
 
   const $ = (id) => document.getElementById(id);
   const sidebarEl = $('sidebar');
@@ -2435,6 +2674,22 @@
   const btnRenameConfirm = $('btn-rename-confirm');
   let renameTargetVideo = null;
   let lastHoveredVideo = null;
+  const renameTitle = $('rename-title');
+  const npTitle = $('np-title');
+  const npDesc = $('np-desc');
+
+  // 媒体类型分段器与图片查看器
+  const mediaSeg = $('media-seg');
+  const mediaCountEls = { all: $('media-n-all'), video: $('media-n-video'), image: $('media-n-image') };
+  const modalImageStage = $('modal-image-stage');
+  const modalImage = $('modal-image');
+  const modalImageErrorText = $('modal-image-error-text');
+  const modalInfoBtn = $('modal-info-btn');
+  const imageTools = $('image-tools');
+  const imageZoomLabel = $('image-zoom-label');
+  const imageStrip = $('image-strip');
+  const imagePanel = $('image-panel');
+  let mediaMode = 'all';   // 'all' | 'video' | 'image'，按目录记忆在 IDB kv
 
   const SPEED_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   let modalHudTimer = null;
@@ -2487,7 +2742,14 @@
   let currentNpVideo = null;
   function openNonPlayableDialog(v) {
     currentNpVideo = v;
-    npFormat.textContent = (v.ext || '').toUpperCase();
+    const fmt = (v.ext || '').toUpperCase();
+    if (isImage(v)) {
+      npTitle.textContent = '无法在浏览器中直接查看';
+      npDesc.innerHTML = `当前图片为 <strong id="np-format">${fmt}</strong> 格式，Chromium 内置解码器不支持。<br>建议用系统「照片」或 XnView 打开，或先转成 JPG。`;
+    } else {
+      npTitle.textContent = '无法在浏览器中直接播放';
+      npDesc.innerHTML = `当前视频为 <strong id="np-format">${fmt}</strong> 格式，受现代浏览器内置解码器限制无法直接播放。<br>建议使用系统默认播放器（如 VLC、PotPlayer）打开。`;
+    }
     const fullRelPath = (v.path ? v.path + '/' : '') + v.name;
     npPath.textContent = fullRelPath;
     btnNpCopy.textContent = '📋 复制相对路径';
@@ -2964,7 +3226,7 @@
                     ? `<span style="color: #F2C94C; font-weight: 500;">🏷️ 分组：${grp.icon} ${escapeHtml(grp.name)}</span>`
                     : `<span style="opacity: 0.7;">📂 未分组</span>`
                   }
-                  ${folder && folder.count != null ? `<span style="margin-left: 6px; opacity: 0.7;">· ${folder.count} 个视频</span>` : ''}
+                  ${folderCountLabel(folder) ? `<span style="margin-left: 6px; opacity: 0.7;">· ${folderCountLabel(folder)}</span>` : ''}
                 </div>
               `;
             }
@@ -3276,7 +3538,7 @@
 
     const subSpan = document.createElement('div');
     subSpan.className = 'folder-item-sub';
-    subSpan.textContent = folder.count != null ? `${folder.count} 个视频` : '点击载入';
+    subSpan.textContent = folderCountLabel(folder) || '点击载入';
 
     details.appendChild(nameSpan);
     details.appendChild(subSpan);
@@ -3549,6 +3811,9 @@
     const ext = name.split('.').pop().toLowerCase();
     return VIDEO_EXT.includes(ext);
   }
+  function isMediaFile(name) {
+    return kindOf(name) !== null;
+  }
   function extOf(name) {
     return name.split('.').pop().toLowerCase();
   }
@@ -3598,7 +3863,7 @@
     const sidecars = new Map();
     for await (const entry of dirHandle.values()) {
       if (entry.kind === 'file') {
-        if (isVideoFile(entry.name)) files.push(entry);
+        if (isMediaFile(entry.name)) files.push(entry);
         else if (entry.name.toLowerCase().endsWith(SIDECAR_SUFFIX)) sidecars.set(entry.name.slice(0, -SIDECAR_SUFFIX.length), entry);
       } else if (entry.kind === 'directory' && recursive) {
         subdirs.push(entry);
@@ -3640,7 +3905,7 @@
     allVideos = [];
     gridEl.innerHTML = '';
     emptyState.style.display = 'none';
-    setStatus(`正在扫描「${cur.customName || cur.name}」中的视频…`);
+    setStatus(`正在扫描「${cur.customName || cur.name}」中的视频与图片…`);
     setControlsEnabled(false);
 
     await loadFavoritesForActiveFolder();
@@ -3651,24 +3916,15 @@
       for await (const { handle: fh, path, parentHandle, sidecarHandle } of walk(cur.handle, '', recursive)) {
         let file;
         try { file = await fh.getFile(); } catch { continue; }
-        allVideos.push({
-          handle: fh,
-          parentHandle,
-          sidecarHandle,
-          name: fh.name,
-          path,
-          ext: extOf(fh.name),
-          size: file.size,
-          mtime: file.lastModified,
-        });
+        allVideos.push(makeMediaItem(fh, path, parentHandle, sidecarHandle, file));
         count++;
-        if (count % 25 === 0) setStatus(`正在扫描「${cur.customName || cur.name}」… 已找到 ${count} 个视频`);
+        if (count % 25 === 0) setStatus(`正在扫描「${cur.customName || cur.name}」… 已找到 ${count} 个文件`);
       }
     } catch (err) {
       console.error('扫描出错:', err);
     }
 
-    cur.count = allVideos.length;
+    applyFolderCounts(cur);
     saveFolderState();
     renderSidebar();
 
@@ -3679,15 +3935,102 @@
       emptyState.innerHTML = `
         <div class="empty-icon-wrap">🍃</div>
         <h3>这里空空如也</h3>
-        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频文件。</div>`;
+        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频或图片文件。</div>`;
     }
 
     const topKeys = new Set(allVideos.map(topFolderOf));
     hasFolderGroups = topKeys.size > 1;
     activeFolder = null;
 
+    await restoreMediaMode(cur.id);
     render();
   }
+
+  // 扫描到的一个文件 → 媒体库条目（视频与图片共用同一结构，只差 kind）
+  function makeMediaItem(fh, path, parentHandle, sidecarHandle, file) {
+    return {
+      handle: fh,
+      parentHandle,
+      sidecarHandle,
+      name: fh.name,
+      path,
+      ext: extOf(fh.name),
+      kind: kindOf(fh.name) || 'video',
+      size: file.size,
+      mtime: file.lastModified,
+    };
+  }
+
+  function countByKind(list) {
+    let video = 0, image = 0;
+    for (const v of list) { if (isImage(v)) image++; else video++; }
+    return { video, image };
+  }
+
+  // 侧栏与 tooltip 里的「N 视频 · M 图片」；旧数据只有 count 时退化为「N 个文件」
+  function applyFolderCounts(folder) {
+    const c = countByKind(allVideos);
+    folder.count = allVideos.length;
+    folder.videoCount = c.video;
+    folder.imageCount = c.image;
+  }
+  function folderCountLabel(folder) {
+    if (!folder || folder.count == null) return null;
+    if (folder.videoCount == null && folder.imageCount == null) return `${folder.count} 个文件`;
+    const parts = [];
+    if (folder.videoCount) parts.push(`${folder.videoCount} 视频`);
+    if (folder.imageCount) parts.push(`${folder.imageCount} 图片`);
+    return parts.length ? parts.join(' · ') : '0 个文件';
+  }
+  function mediaSummary(list) {
+    const c = countByKind(list);
+    const parts = [];
+    if (c.video) parts.push(`${c.video} 视频`);
+    if (c.image) parts.push(`${c.image} 图片`);
+    return parts.length ? parts.join(' · ') : '0 个文件';
+  }
+
+  // ---------- 媒体类型分段器（全部 / 视频 / 图片），按目录记忆 ----------
+  async function restoreMediaMode(folderId) {
+    let saved = null;
+    try { saved = await idbGet(`mediaMode:${folderId}`); } catch {}
+    mediaMode = MEDIA_MODES.includes(saved) ? saved : 'all';
+    // 目录里没有该类型时，回到「全部」，避免面对空网格
+    const c = countByKind(allVideos);
+    if ((mediaMode === 'image' && !c.image) || (mediaMode === 'video' && !c.video)) mediaMode = 'all';
+  }
+  function setMediaMode(mode, { persist = true } = {}) {
+    if (!MEDIA_MODES.includes(mode)) return;
+    mediaMode = mode;
+    if (persist && activeFolderId) idbSet(`mediaMode:${activeFolderId}`, mode).catch(() => {});
+    render();
+  }
+  // 当前媒体模式下的基础列表（搜索、目录胶囊、分组统计都从这里出发）
+  function mediaBase() {
+    if (mediaMode === 'all') return allVideos;
+    return allVideos.filter(v => (mediaMode === 'image') === isImage(v));
+  }
+  function updateMediaSeg() {
+    const c = countByKind(allVideos);
+    mediaCountEls.all.textContent = allVideos.length || '';
+    mediaCountEls.video.textContent = c.video || '';
+    mediaCountEls.image.textContent = c.image || '';
+    mediaSeg.classList.toggle('is-disabled', !allVideos.length);
+    mediaSeg.querySelectorAll('button').forEach(b => {
+      const m = b.dataset.mode;
+      b.classList.toggle('on', m === mediaMode);
+      b.disabled = (m === 'video' && !c.video) || (m === 'image' && !c.image);
+    });
+    // Feed 目前只刷视频；图片幻灯片在下一阶段接入
+    btnFeed.textContent = mediaMode === 'video' ? '🔀 刷视频' : mediaMode === 'image' ? '🔀 刷图片' : '🔀 刷一刷';
+    btnFeed.disabled = !allVideos.length || !c.video || mediaMode === 'image';
+    btnFeed.title = mediaMode === 'image' ? '图片幻灯片即将支持' : '沉浸式竖屏刷视频';
+  }
+  mediaSeg.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b || b.disabled) return;
+    setMediaMode(b.dataset.mode);
+  });
 
   // ---------- 目录一键重新扫描 (增量感知) ----------
   async function rescanActiveFolder() {
@@ -3721,30 +4064,12 @@
             existing.handle = fh;
             scannedVideos.push(existing);
           } else {
-            scannedVideos.push({
-              handle: fh,
-              parentHandle,
-              sidecarHandle,
-              name: fh.name,
-              path,
-              ext: extOf(fh.name),
-              size: file.size,
-              mtime: file.lastModified,
-            });
+            scannedVideos.push(makeMediaItem(fh, path, parentHandle, sidecarHandle, file));
           }
           oldMap.delete(key);
         } else {
           addedCount++;
-          scannedVideos.push({
-            handle: fh,
-            parentHandle,
-            sidecarHandle,
-            name: fh.name,
-            path,
-            ext: extOf(fh.name),
-            size: file.size,
-            mtime: file.lastModified,
-          });
+          scannedVideos.push(makeMediaItem(fh, path, parentHandle, sidecarHandle, file));
         }
       }
     } catch (err) {
@@ -3753,7 +4078,7 @@
 
     const removedCount = oldMap.size;
     allVideos = scannedVideos;
-    cur.count = allVideos.length;
+    applyFolderCounts(cur);
     await saveFolderState();
     renderSidebar();
     await loadFavoritesForActiveFolder();
@@ -3766,17 +4091,19 @@
       emptyState.innerHTML = `
         <div class="empty-icon-wrap">🍃</div>
         <h3>这里空空如也</h3>
-        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频文件。</div>`;
+        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频或图片文件。</div>`;
     }
 
     const topKeys = new Set(allVideos.map(topFolderOf));
     hasFolderGroups = topKeys.size > 1;
+    const kc = countByKind(allVideos);
+    if ((mediaMode === 'image' && !kc.image) || (mediaMode === 'video' && !kc.video)) mediaMode = 'all';
     render();
 
     if (addedCount > 0 || removedCount > 0) {
-      setStatus(`扫描完毕：新增 ${addedCount} 个，移除 ${removedCount} 个视频`);
+      setStatus(`扫描完毕：新增 ${addedCount} 个，移除 ${removedCount} 个文件（${mediaSummary(allVideos)}）`);
     } else {
-      setStatus(`目录已是最新状态，共 ${allVideos.length} 个视频`);
+      setStatus(`目录已是最新状态，共 ${mediaSummary(allVideos)}`);
     }
     setTimeout(() => {
       if (statusBar.textContent.startsWith('扫描完毕') || statusBar.textContent.startsWith('目录已是最新')) {
@@ -3924,6 +4251,7 @@
   function openRenameDialog(v) {
     if (!v) return;
     renameTargetVideo = v;
+    if (renameTitle) renameTitle.textContent = `重命名${kindLabel(v)}`;
     renameInput.value = stemOf(v.name);
     renameExt.textContent = '.' + v.ext;
     renameMsg.textContent = '';
@@ -3954,7 +4282,7 @@
     const newStem = raw.replace(new RegExp(`\\.${v.ext}$`, 'i'), '').trim();
 
     if (!newStem) {
-      renameMsg.textContent = '视频名称不能为空';
+      renameMsg.textContent = '文件名称不能为空';
       return;
     }
     if (/[\\/:*?"<>|]/.test(newStem)) {
@@ -4202,13 +4530,14 @@
 
   function renderFolderBar() {
     folderBarEl.innerHTML = '';
-    const favCount = allVideos.filter(isFavorited).length;
+    const base = mediaBase();
+    const favCount = base.filter(isFavorited).length;
     const shouldShow = hasFolderGroups || favCount > 0;
     folderBarEl.classList.toggle('show', shouldShow);
     if (!shouldShow) return;
 
     const counts = new Map();
-    for (const v of allVideos) {
+    for (const v of base) {
       const key = topFolderOf(v);
       counts.set(key, (counts.get(key) || 0) + 1);
     }
@@ -4240,12 +4569,12 @@
       return pill;
     };
 
-    folderBarEl.appendChild(makePill('全部', allVideos.length, null));
+    folderBarEl.appendChild(makePill('全部', base.length, null));
     if (favCount > 0 || activeFolder === '__FAVORITES__') {
       folderBarEl.appendChild(makePill('⭐ 已收藏', favCount, '__FAVORITES__', 'fav-pill'));
     }
     if (hasFolderGroups) {
-      keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k), k)));
+      keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k) || 0, k)));
     }
   }
 
@@ -4261,7 +4590,7 @@
 
     const nextBatch = renderQueue.slice(renderedCount, renderedCount + CHUNK_SIZE);
     nextBatch.forEach(entry => {
-      const { item, idx, groupName, groupTotal } = entry;
+      const { item, idx, groupName, groupLabel } = entry;
 
       let sectionGrid = groupSectionMap.get(groupName);
       if (!sectionGrid) {
@@ -4276,7 +4605,7 @@
           name.textContent = groupName;
           const count = document.createElement('span');
           count.className = 'group-count';
-          count.textContent = `${groupTotal} 个视频`;
+          count.textContent = groupLabel;
           header.appendChild(dot);
           header.appendChild(name);
           header.appendChild(count);
@@ -4314,10 +4643,11 @@
     if (io) { io.disconnect(); }
     io = new IntersectionObserver(onIntersect, { rootMargin: '400px' });
 
+    updateMediaSeg();
     renderFolderBar();
 
     const q = searchInput.value.trim().toLowerCase();
-    let base = allVideos.filter(v => !q || v.name.toLowerCase().includes(q) || v.path.toLowerCase().includes(q));
+    let base = mediaBase().filter(v => !q || v.name.toLowerCase().includes(q) || v.path.toLowerCase().includes(q));
     if (activeFolder === '__FAVORITES__') {
       base = base.filter(isFavorited);
     } else if (activeFolder) {
@@ -4358,13 +4688,13 @@
           item: v,
           idx: idx++,
           groupName: g.name,
-          groupTotal: g.items.length
+          groupLabel: mediaSummary(g.items)
         });
       });
     });
 
     statsEl.textContent = allVideos.length
-      ? `${filtered.length} / ${allVideos.length} 个切片 · ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
+      ? `${filtered.length} / ${allVideos.length} · ${mediaSummary(allVideos)} · ${fmtSize(allVideos.reduce((s,v)=>s+v.size,0))}`
       : '';
 
     // 首屏快速挂载首批（60 个）
@@ -4372,10 +4702,11 @@
   }
 
   function buildCard(v, idx) {
-    const isPlayable = NATIVE_PLAYABLE.includes(v.ext);
+    const img = isImage(v);
+    const isPlayable = isNativeMedia(v);
     const isFav = isFavorited(v);
     const card = document.createElement('div');
-    card.className = 'card' + (!isPlayable ? ' is-non-playable' : '');
+    card.className = 'card' + (!isPlayable ? ' is-non-playable' : '') + (img ? ' is-image' : '');
     card.dataset.idx = idx;
 
     const thumbWrap = document.createElement('div');
@@ -4383,18 +4714,30 @@
 
     const placeholder = document.createElement('div');
     placeholder.className = 'placeholder';
-    placeholder.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 4h16v16H4z" stroke-opacity=".4"/><path d="M10 9l5 3-5 3z"/></svg>`;
+    placeholder.innerHTML = img
+      ? `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="4" width="16" height="16" rx="2" stroke-opacity=".4"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4.5 17l4.5-4.5 3 3 3-3.5 4.5 5"/></svg>`
+      : `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 4h16v16H4z" stroke-opacity=".4"/><path d="M10 9l5 3-5 3z"/></svg>`;
     thumbWrap.appendChild(placeholder);
 
     const extBadge = document.createElement('div');
-    extBadge.className = 'ext-badge' + (!isPlayable ? ' non-native' : '');
-    extBadge.textContent = isPlayable ? v.ext : `${v.ext} · 需外部播放`;
+    extBadge.className = 'ext-badge' + (!isPlayable ? ' non-native' : img ? ' image' : '');
+    extBadge.textContent = isPlayable
+      ? (img ? `🖼 ${v.ext}` : v.ext)
+      : `${v.ext} · 需外部${img ? '查看' : '播放'}`;
     thumbWrap.appendChild(extBadge);
 
+    // 右下角标：视频是时长，图片是像素尺寸
     const durBadge = document.createElement('div');
     durBadge.className = 'duration-badge';
     durBadge.style.display = 'none';
     thumbWrap.appendChild(durBadge);
+    if (img && v.ext === 'gif') {
+      const gifBadge = document.createElement('div');
+      gifBadge.className = 'duration-badge';
+      gifBadge.style.cssText = 'left:7px; right:auto; background:rgba(242,201,76,.92); color:#2D2724;';
+      gifBadge.textContent = 'GIF 动图';
+      thumbWrap.appendChild(gifBadge);
+    }
 
     // 拾光笺存档的视频：来源徽标（具体站点等进入视口时读 sidecar 再补）
     let sourceBadge = null;
@@ -4417,7 +4760,18 @@
     });
     thumbWrap.appendChild(favBtn);
 
-    if (isPlayable) {
+    if (isPlayable && img) {
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'card-open-btn';
+      openBtn.title = '从这里开始看图';
+      openBtn.textContent = '🔍';
+      openBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModal(idx);
+      });
+      thumbWrap.appendChild(openBtn);
+    } else if (isPlayable) {
       const feedBtn = document.createElement('button');
       feedBtn.type = 'button';
       feedBtn.className = 'card-feed-btn';
@@ -4457,7 +4811,7 @@
     const renameBtn = document.createElement('button');
     renameBtn.type = 'button';
     renameBtn.className = 'card-rename-btn';
-    renameBtn.title = '重命名视频文件 (F2)';
+    renameBtn.title = `重命名${kindLabel(v)}文件 (F2)`;
     renameBtn.textContent = '✏️';
     renameBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -4514,11 +4868,146 @@
     }
   }
 
-  // 离屏提取海报与时长 (带 IndexedDB 持久化缓存池)
+  // ---------- 图片解码并发闸门：一屏几十张照片同时进视口时排队解码，避免主线程被撑爆 ----------
+  const IMAGE_DECODE_LIMIT = 4;
+  let imageDecodeActive = 0;
+  const imageDecodeQueue = [];
+  function withImageDecodeSlot(fn) {
+    return new Promise((resolve, reject) => {
+      const run = async () => {
+        imageDecodeActive++;
+        try { resolve(await fn()); }
+        catch (e) { reject(e); }
+        finally {
+          imageDecodeActive--;
+          const next = imageDecodeQueue.shift();
+          if (next) next();
+        }
+      };
+      if (imageDecodeActive < IMAGE_DECODE_LIMIT) run();
+      else imageDecodeQueue.push(run);
+    });
+  }
+
+  // 只读文件头解析像素尺寸（JPEG SOF / PNG IHDR / GIF / WebP / BMP），不做完整解码。
+  // JPEG 同时读 EXIF Orientation：5~8 表示需要转 90°，宽高对调。找不到返回 null。
+  function parseImageHeader(buf) {
+    const d = new DataView(buf);
+    const n = d.byteLength;
+    if (n < 24) return null;
+    const b0 = d.getUint8(0), b1 = d.getUint8(1);
+    // PNG
+    if (b0 === 0x89 && b1 === 0x50 && d.getUint32(12) === 0x49484452) {
+      return { w: d.getUint32(16), h: d.getUint32(20) };
+    }
+    // GIF
+    if (b0 === 0x47 && b1 === 0x49 && d.getUint8(2) === 0x46) {
+      return { w: d.getUint16(6, true), h: d.getUint16(8, true) };
+    }
+    // BMP
+    if (b0 === 0x42 && b1 === 0x4D && n >= 26) {
+      return { w: Math.abs(d.getInt32(18, true)), h: Math.abs(d.getInt32(22, true)) };
+    }
+    // WebP
+    if (d.getUint32(0) === 0x52494646 && d.getUint32(8) === 0x57454250 && n >= 30) {
+      const chunk = d.getUint32(12);
+      if (chunk === 0x56503820) return { w: d.getUint16(26, true) & 0x3fff, h: d.getUint16(28, true) & 0x3fff };            // 'VP8 '
+      if (chunk === 0x5650384C) {                                                                                          // 'VP8L'
+        const bits = d.getUint32(21, true);
+        return { w: (bits & 0x3fff) + 1, h: ((bits >> 14) & 0x3fff) + 1 };
+      }
+      if (chunk === 0x56503858) {                                                                                          // 'VP8X'
+        const w = 1 + (d.getUint8(24) | (d.getUint8(25) << 8) | (d.getUint8(26) << 16));
+        const h = 1 + (d.getUint8(27) | (d.getUint8(28) << 8) | (d.getUint8(29) << 16));
+        return { w, h };
+      }
+      return null;
+    }
+    // JPEG：逐段扫描，APP1 里取 Orientation，SOFn 里取尺寸
+    if (b0 === 0xFF && b1 === 0xD8) {
+      let off = 2, orientation = 1, dims = null;
+      while (off + 4 <= n) {
+        if (d.getUint8(off) !== 0xFF) { off++; continue; }
+        const marker = d.getUint8(off + 1);
+        if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) { off += 2; continue; }
+        if (marker === 0xD9 || marker === 0xDA) break;
+        const len = d.getUint16(off + 2);
+        if (len < 2) break;
+        if (marker === 0xE1 && off + 10 <= n && d.getUint32(off + 4) === 0x45786966) {  // 'Exif'
+          try {
+            const t = off + 10;
+            const le = d.getUint16(t) === 0x4949;
+            const ifd = t + d.getUint32(t + 4, le);
+            const cnt = d.getUint16(ifd, le);
+            for (let i = 0; i < cnt; i++) {
+              const e = ifd + 2 + i * 12;
+              if (e + 12 > n) break;
+              if (d.getUint16(e, le) === 0x0112) { orientation = d.getUint16(e + 8, le); break; }
+            }
+          } catch {}
+        }
+        const isSOF = (marker >= 0xC0 && marker <= 0xCF) && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC;
+        if (isSOF && off + 9 <= n) {
+          dims = { h: d.getUint16(off + 5), w: d.getUint16(off + 7) };
+          break;
+        }
+        off += 2 + len;
+      }
+      if (!dims) return null;
+      return orientation >= 5 ? { w: dims.h, h: dims.w } : dims;
+    }
+    return null;
+  }
+
+  async function readImageDimensions(v) {
+    if (v._w && v._h) return;
+    try {
+      const file = await v.handle.getFile();
+      const buf = await file.slice(0, 256 * 1024).arrayBuffer();
+      const r = parseImageHeader(buf);
+      if (r && r.w > 0 && r.h > 0) { v._w = r.w; v._h = r.h; }
+    } catch {}
+  }
+
+  // 图片缩略图：createImageBitmap 按 EXIF 方向转正并缩放到 320 宽，再 cover 绘到 320×180
+  async function extractImageThumbnail(v) {
+    const file = await v.handle.getFile();
+    let bmp = null;
+    try {
+      bmp = await createImageBitmap(file, { resizeWidth: 320, resizeQuality: 'medium', imageOrientation: 'from-image' });
+    } catch {
+      // SVG / 旧内核不支持选项：回退 <img> 路径
+      bmp = await new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const im = new Image();
+        im.onload = () => { URL.revokeObjectURL(url); resolve(im.naturalWidth ? im : null); };
+        im.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+        im.src = url;
+      });
+    }
+    if (!bmp) return null;
+    const sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
+    if (!sw || !sh) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#23201D';
+    ctx.fillRect(0, 0, 320, 180);
+    const scale = Math.max(320 / sw, 180 / sh);
+    const dw = sw * scale, dh = sh * scale;
+    ctx.drawImage(bmp, (320 - dw) / 2, (180 - dh) / 2, dw, dh);
+    if (typeof bmp.close === 'function') bmp.close();
+    // 文件头没解析出尺寸时（如 SVG），退而用解码结果
+    if (!v._w && !(bmp instanceof ImageBitmap)) { v._w = sw; v._h = sh; }
+    return canvas.toDataURL('image/jpeg', 0.7);
+  }
+
+  // 离屏提取海报与时长 / 图片缩略图与尺寸 (带 IndexedDB 持久化缓存池)
   function ensureThumbnail(v) {
     if (v._thumbPromise) return v._thumbPromise;
     v._thumbPromise = (async () => {
-      if (!NATIVE_PLAYABLE.includes(v.ext)) return null;
+      if (!isNativeMedia(v)) return null;
       const cacheKey = getThumbnailCacheKey(v);
 
       // 1. 优先尝试从 IndexedDB 读取持久化缓存 (0ms 纯本地秒开)
@@ -4526,11 +5015,26 @@
         const cached = await idbGetThumbnail(cacheKey);
         if (cached && cached.dataUrl) {
           if (cached.duration && !v._duration) v._duration = cached.duration;
+          if (cached.w && cached.h && !v._w) { v._w = cached.w; v._h = cached.h; }
           return cached.dataUrl;
         }
       } catch {}
 
-      // 2. 未命中缓存，进入离屏视频抽取管线
+      // 2a. 图片：文件头取尺寸 + 位图缩放，走并发闸门
+      if (isImage(v)) {
+        try {
+          await readImageDimensions(v);
+          const dataUrl = await withImageDecodeSlot(() => extractImageThumbnail(v));
+          if (dataUrl) idbSetThumbnail(cacheKey, { dataUrl, w: v._w, h: v._h, cachedAt: Date.now() });
+          else v._thumbError = true;
+          return dataUrl;
+        } catch {
+          v._thumbError = true;
+          return null;
+        }
+      }
+
+      // 2b. 视频：未命中缓存，进入离屏视频抽取管线
       let file, url;
       try {
         file = await v.handle.getFile();
@@ -4588,7 +5092,16 @@
   async function generateThumbnail(card) {
     const v = card._video;
     const dataUrl = await ensureThumbnail(v);
-    if (v._duration) {
+    if (isImage(v)) {
+      if (v._w && v._h) {
+        card._durBadge.textContent = `${v._w}×${v._h}`;
+        card._durBadge.style.display = '';
+      }
+      if (!dataUrl && v._thumbError && card._placeholder) {
+        card._placeholder.classList.add('image-error');
+        card._placeholder.innerHTML = '<span style="font-size:22px;">⚠</span><span>无法解码</span>';
+      }
+    } else if (v._duration) {
       card._durBadge.textContent = fmtDuration(v._duration);
       card._durBadge.style.display = '';
     }
@@ -4808,9 +5321,11 @@
   }
 
   function openFeed(startIdx, opts = {}) {
-    if (!filtered.length) return;
-    feedList = opts.shuffle ? shuffleArray(filtered) : filtered.slice();
-    feedIndex = opts.shuffle ? 0 : startIdx;
+    // Feed 目前只接视频；混排列表里的图片先跳过（图片幻灯片在下一阶段接入）
+    const videosOnly = filtered.filter(v => !isImage(v));
+    if (!videosOnly.length) return;
+    feedList = opts.shuffle ? shuffleArray(videosOnly) : videosOnly;
+    feedIndex = opts.shuffle ? 0 : Math.max(0, videosOnly.indexOf(filtered[startIdx]));
     feedLoaded.clear();
     feedEl.innerHTML = '';
 
@@ -4883,19 +5398,39 @@
   });
 
   async function openModal(idx) {
-    currentModalIndex = idx;
     const v = filtered[idx];
     if (!v) return;
+    if (!isNativeMedia(v)) { openNonPlayableDialog(v); return; }
+
+    // 从一个视频切走前先把它的进度记下来并停掉，避免 pause 事件把进度记到下一个条目上
+    if (modal.classList.contains('show') && currentModalIndex >= 0 && filtered[currentModalIndex] && !isImage(filtered[currentModalIndex])) {
+      savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
+    }
+    currentModalIndex = -1;
+    modalVideo.pause();
+
     let file;
     try { file = await v.handle.getFile(); }
     catch { alert('无法读取该文件，可能已被移动或删除。'); return; }
+    currentModalIndex = idx;
 
     if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl = URL.createObjectURL(file);
-    modalVideo.playbackRate = 1.0;
-    modalVideo.src = currentObjectUrl;
-    modalVideo.volume = getSavedVolume();
-    modalVideo.muted = getSavedMuted();
+
+    const img = isImage(v);
+    modal.classList.toggle('is-image', img);
+    if (modalInfoBtn) modalInfoBtn.style.display = img ? '' : 'none';
+    if (img) {
+      modalVideo.removeAttribute('src');
+      modalVideo.load();
+      showImageInStage(v, currentObjectUrl);
+    } else {
+      clearImageStage();
+      modalVideo.playbackRate = 1.0;
+      modalVideo.src = currentObjectUrl;
+      modalVideo.volume = getSavedVolume();
+      modalVideo.muted = getSavedMuted();
+    }
     modalInfo.textContent = `${v.path ? v.path + '/' : ''}${v.name}  ·  ${fmtSize(v.size)}  ·  ${fmtDate(v.mtime)}`;
     updateModalSource(v);
     const isFav = isFavorited(v);
@@ -4904,8 +5439,13 @@
       modalFavBtn.classList.toggle('is-active', isFav);
     }
     modal.classList.add('show');
-    navPrev.style.visibility = idx > 0 ? 'visible' : 'hidden';
-    navNext.style.visibility = idx < filtered.length - 1 ? 'visible' : 'hidden';
+    navPrev.style.visibility = filtered.slice(0, idx).some(isNativeMedia) ? 'visible' : 'hidden';
+    navNext.style.visibility = filtered.slice(idx + 1).some(isNativeMedia) ? 'visible' : 'hidden';
+    if (img) {
+      renderImageStrip();
+      renderImagePanel(v);
+      return;
+    }
 
     // 检查并恢复断点续播进度
     const prog = getSavedProgress(v);
@@ -4921,7 +5461,7 @@
 
   let modalProgressTimer = null;
   modalVideo.addEventListener('timeupdate', () => {
-    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex] && !isImage(filtered[currentModalIndex])) {
       const curV = filtered[currentModalIndex];
       if (!modalProgressTimer) {
         modalProgressTimer = setTimeout(() => {
@@ -4933,25 +5473,183 @@
   });
 
   modalVideo.addEventListener('pause', () => {
-    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex] && !isImage(filtered[currentModalIndex])) {
       savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
     }
   });
 
   function closeModal() {
-    if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+    if (currentModalIndex >= 0 && filtered[currentModalIndex] && !isImage(filtered[currentModalIndex])) {
       savePlaybackProgress(filtered[currentModalIndex], modalVideo.currentTime, modalVideo.duration);
     }
-    modal.classList.remove('show');
+    modal.classList.remove('show', 'is-image', 'show-info');
     modalVideo.pause();
     modalVideo.removeAttribute('src');
     modalVideo.load();
+    clearImageStage();
     if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
     currentModalIndex = -1;
   }
 
+  // ---------- 图片查看器：缩放 / 平移 / 旋转 / 适应 / 1:1 ----------
+  const IMG_ZOOM_MAX = 8;
+  const imgView = { scale: 1, fit: 1, tx: 0, ty: 0, rot: 0, natW: 0, natH: 0, drag: null, loadToken: 0 };
+
+  function showImageInStage(v, url) {
+    const token = ++imgView.loadToken;
+    modalImageStage.classList.remove('has-error');
+    modalImage.classList.remove('ready');
+    modalImage.style.transform = '';
+    imgView.rot = 0; imgView.natW = 0; imgView.natH = 0;
+    modalImage.src = url;
+    // 先等 load，再尽量等 decode() 完成后显示（避免大图先闪一帧空白）；
+    // 页面在后台时 decode() 可能一直不结算，所以给它一个上限，超时就直接显示
+    const loaded = new Promise((resolve, reject) => {
+      if (modalImage.complete && modalImage.naturalWidth) return resolve();
+      modalImage.onload = () => resolve();
+      modalImage.onerror = () => reject(new Error('load'));
+    });
+    const p = loaded.then(() => {
+      if (typeof modalImage.decode !== 'function') return;
+      return Promise.race([modalImage.decode().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
+    });
+    p.then(() => {
+      if (token !== imgView.loadToken) return;
+      imgView.natW = modalImage.naturalWidth;
+      imgView.natH = modalImage.naturalHeight;
+      if (!imgView.natW || !imgView.natH) throw new Error('empty');
+      if (!v._w) { v._w = imgView.natW; v._h = imgView.natH; }
+      // 高宽比超过 2.5 的竖长截图默认「适应宽度」，可上下拖着看
+      fitImage(imgView.natH / imgView.natW > 2.5 ? 'width' : 'all');
+      modalImage.classList.add('ready');
+      renderImagePanel(v);
+    }).catch(() => {
+      if (token !== imgView.loadToken) return;
+      modalImageStage.classList.add('has-error');
+      modalImageErrorText.textContent = `这张 ${v.ext.toUpperCase()} 无法解码，文件可能已损坏`;
+    });
+  }
+  function clearImageStage() {
+    imgView.loadToken++;
+    modalImage.classList.remove('ready');
+    modalImage.removeAttribute('src');
+    modalImageStage.classList.remove('has-error', 'dragging');
+    imgView.drag = null;
+    imageStrip.innerHTML = '';
+  }
+  function fitImage(how) {
+    if (!imgView.natW) return;
+    const r = modalImageStage.getBoundingClientRect();
+    const rotated = imgView.rot % 180 !== 0;
+    const sw = rotated ? imgView.natH : imgView.natW, sh = rotated ? imgView.natW : imgView.natH;
+    imgView.fit = how === 'width'
+      ? Math.min(1, (r.width - 32) / sw)
+      : Math.min(1, (r.width - 32) / sw, (r.height - 32) / sh);
+    imgView.scale = imgView.fit;
+    imgView.tx = 0;
+    imgView.ty = how === 'width' ? Math.max(0, (sh * imgView.scale - r.height) / 2) : 0;
+    applyImageTransform();
+  }
+  function applyImageTransform() {
+    if (!imgView.natW) return;
+    modalImage.style.transform = `translate(${imgView.tx}px, ${imgView.ty}px) translate(-50%, -50%) scale(${imgView.scale}) rotate(${imgView.rot}deg)`;
+    imageZoomLabel.textContent = `${Math.round(imgView.scale * 100)}%`;
+  }
+  // 以 (cx, cy) 为不动点缩放：缩放前后光标下的图像点保持不动
+  function zoomImageAt(factor, cx, cy) {
+    if (!imgView.natW) return;
+    const r = modalImageStage.getBoundingClientRect();
+    const px = cx - r.left - r.width / 2, py = cy - r.top - r.height / 2;
+    const ns = Math.max(imgView.fit * 0.5, Math.min(IMG_ZOOM_MAX, imgView.scale * factor));
+    const k = ns / imgView.scale;
+    imgView.tx = px - (px - imgView.tx) * k;
+    imgView.ty = py - (py - imgView.ty) * k;
+    imgView.scale = ns;
+    applyImageTransform();
+  }
+  function zoomImageCenter(factor) {
+    const r = modalImageStage.getBoundingClientRect();
+    zoomImageAt(factor, r.left + r.width / 2, r.top + r.height / 2);
+  }
+  function imageToolAction(act) {
+    if (!modal.classList.contains('is-image')) return;
+    if (act === 'in') zoomImageCenter(1.25);
+    else if (act === 'out') zoomImageCenter(1 / 1.25);
+    else if (act === 'fit') { fitImage('all'); showModalHud('适应窗口'); }
+    else if (act === 'one') { zoomImageCenter(1 / imgView.scale); showModalHud('原始像素 100%'); }
+    else if (act === 'rot') { imgView.rot = (imgView.rot + 90) % 360; fitImage('all'); showModalHud(`↻ ${imgView.rot}°`); }
+  }
+  imageTools.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-act]');
+    if (b) imageToolAction(b.dataset.act);
+  });
+  modalImageStage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomImageAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
+  }, { passive: false });
+  modalImageStage.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || !imgView.natW) return;
+    imgView.drag = { x: e.clientX, y: e.clientY, tx: imgView.tx, ty: imgView.ty };
+    modalImageStage.setPointerCapture(e.pointerId);
+    modalImageStage.classList.add('dragging');
+  });
+  modalImageStage.addEventListener('pointermove', (e) => {
+    if (!imgView.drag) return;
+    imgView.tx = imgView.drag.tx + (e.clientX - imgView.drag.x);
+    imgView.ty = imgView.drag.ty + (e.clientY - imgView.drag.y);
+    applyImageTransform();
+  });
+  const endImageDrag = () => { imgView.drag = null; modalImageStage.classList.remove('dragging'); };
+  modalImageStage.addEventListener('pointerup', endImageDrag);
+  modalImageStage.addEventListener('pointercancel', endImageDrag);
+  modalImageStage.addEventListener('dblclick', (e) => {
+    if (!imgView.natW) return;
+    if (imgView.scale > imgView.fit + 0.001) fitImage('all');
+    else zoomImageAt((2 * imgView.fit) / imgView.scale, e.clientX, e.clientY);
+  });
+  window.addEventListener('resize', () => {
+    if (modal.classList.contains('is-image') && imgView.natW && imgView.scale <= imgView.fit + 0.001) fitImage('all');
+  });
+  if (modalInfoBtn) modalInfoBtn.addEventListener('click', () => modal.classList.toggle('show-info'));
+
+  // 底部缩略图条：当前位置 ±8 张，复用缩略图缓存
+  function renderImageStrip() {
+    imageStrip.innerHTML = '';
+    const from = Math.max(0, currentModalIndex - 8);
+    const to = Math.min(filtered.length, currentModalIndex + 9);
+    for (let i = from; i < to; i++) {
+      const it = filtered[i];
+      const el = document.createElement('div');
+      el.className = 'strip-item' + (i === currentModalIndex ? ' on' : '') + (isImage(it) ? '' : ' is-video');
+      el.title = it.name;
+      el.addEventListener('click', () => openModal(i));
+      imageStrip.appendChild(el);
+      ensureThumbnail(it).then((dataUrl) => { if (dataUrl && el.isConnected) el.style.backgroundImage = `url(${dataUrl})`; });
+    }
+    const on = imageStrip.querySelector('.on');
+    if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+
+  // 右侧信息面板（文件部分；EXIF 在下一阶段接入）
+  function renderImagePanel(v) {
+    if (!v || !isImage(v)) return;
+    const w = v._w || imgView.natW, h = v._h || imgView.natH;
+    const rows = [
+      ['文件名', v.name],
+      ['路径', v.path || '.'],
+      ['类型', `图片 · ${v.ext.toUpperCase()}`],
+      ['尺寸', w && h ? `${w} × ${h}（${(w * h / 1e6).toFixed(1)} MP）` : '读取中…'],
+      ['大小', fmtSize(v.size)],
+      ['修改时间', fmtDate(v.mtime)],
+    ];
+    imagePanel.innerHTML = `<h4>文件</h4><dl>${rows.map(([k, val]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(val))}</dd>`).join('')}</dl>` +
+      `<div class="panel-note">滚轮缩放 · 拖拽平移 · 双击在「适应」与 2× 间切换 · R 旋转 · 0 适应 · 1 原始像素</div>`;
+  }
+
+  // 上一个 / 下一个：跳过浏览器打不开的格式（MKV、HEIC…），不在翻页途中弹拦截提示
   function navigate(delta) {
-    const next = currentModalIndex + delta;
+    let next = currentModalIndex + delta;
+    while (next >= 0 && next < filtered.length && !isNativeMedia(filtered[next])) next += delta;
     if (next >= 0 && next < filtered.length) openModal(next);
   }
 
@@ -5090,6 +5788,19 @@
 
     // Modal 弹窗模式下的快捷键
     if (modal.classList.contains('show')) {
+      // 图片查看器：方向键翻页，+/- 缩放，0 适应，1 原始，R 旋转，I 信息；其余与视频一致
+      if (modal.classList.contains('is-image')) {
+        const k = e.key;
+        if (k === 'ArrowLeft' || k === 'PageUp' || k.toLowerCase() === 'p') { e.preventDefault(); navigate(-1); return; }
+        if (k === 'ArrowRight' || k === 'PageDown' || k.toLowerCase() === 'n') { e.preventDefault(); navigate(1); return; }
+        if (k === '+' || k === '=') { e.preventDefault(); imageToolAction('in'); return; }
+        if (k === '-' || k === '_') { e.preventDefault(); imageToolAction('out'); return; }
+        if (k === '0') { e.preventDefault(); imageToolAction('fit'); return; }
+        if (k === '1') { e.preventDefault(); imageToolAction('one'); return; }
+        if (k.toLowerCase() === 'r') { e.preventDefault(); imageToolAction('rot'); return; }
+        if (k.toLowerCase() === 'i') { e.preventDefault(); modal.classList.toggle('show-info'); return; }
+        if (k === ' ' || k === 'ArrowUp' || k === 'ArrowDown' || k === '[' || k === ']' || k === '【' || k === '】') { e.preventDefault(); return; }
+      }
       if (e.key === 'Escape') {
         closeModal();
       } else if (e.key.toLowerCase() === 's') {

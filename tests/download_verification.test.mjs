@@ -77,7 +77,7 @@ test('walk() 把 sidecar 按同名挂到视频上，并递归子目录', async (
   const VIDEO_EXT = ['mp4', 'webm', 'mov'];
   const ctx = loadFunctions(['walk', 'stemOf'], {
     SIDECAR_SUFFIX: '.suishi.json',
-    isVideoFile: (n) => VIDEO_EXT.includes(n.split('.').pop().toLowerCase()),
+    isMediaFile: (n) => VIDEO_EXT.includes(n.split('.').pop().toLowerCase()),   // walk() 现在按“视频或图片”过滤
   });
   const sub = fakeDir([fakeFile('b [BV2].mp4'), fakeFile('b [BV2].suishi.json'), fakeFile('readme.txt')]);
   sub.name = 'sub';
