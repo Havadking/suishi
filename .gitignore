@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+# 局域网分享服务：本机目录配置与 ffmpeg 封面缓存
+share.json
+.suishi-cache/

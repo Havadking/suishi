@@ -2340,6 +2340,65 @@
     animation: spin 0.8s linear infinite;
   }
 
+  /* ---------- 局域网模式（页面由 server.mjs 托管、在平板 / 手机上打开时） ---------- */
+  /* 目录来自电脑端启动参数，本机相关的入口一律隐藏；服务只读，删除 / 重命名也隐藏 */
+  body.remote-mode .sidebar-add-wrap,
+  body.remote-mode .sidebar-dl-wrap,
+  body.remote-mode .sidebar-divider,
+  body.remote-mode #btn-create-group,
+  body.remote-mode .card-actions,
+  body.remote-mode #modal-rename,
+  body.remote-mode #modal-delete,
+  body.remote-mode #feed-rename { display: none !important; }
+  body.remote-mode .brand-sub { color: var(--accent); }
+  #sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 23, 20, 0.45);
+    z-index: 45;
+  }
+
+  /* ---------- 触屏：悬停才出现的按钮改为常显 ---------- */
+  @media (hover: none) {
+    .card .card-feed-btn,
+    .card .card-fav-btn,
+    .folder-item .folder-item-actions { display: flex; }
+  }
+
+  /* ---------- 窄屏（平板竖屏 / 手机）：侧栏抽屉化，工具栏与网格收紧 ---------- */
+  @media (max-width: 900px) {
+    #sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-w) !important;
+      min-width: var(--sidebar-w) !important;
+      transform: translateX(-100%);
+      transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: none;
+      z-index: 50;
+    }
+    #sidebar.mobile-open { transform: none; box-shadow: 0 0 40px rgba(28, 23, 20, 0.35); }
+    #sidebar-backdrop.show { display: block; }
+    #btn-toggle-sidebar { display: none !important; }
+    #btn-open-sidebar { display: inline-flex !important; }
+    #main-wrap { width: 100vw; }
+    header { padding: 10px 12px; gap: 8px; }
+    .search-wrap { min-width: 140px; max-width: none; order: 10; flex-basis: 100%; }
+    #content-scroll { padding: 12px; }
+    .section-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    #modal .modal-controls { top: 10px; right: 10px; left: 10px; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    #modal .modal-controls button { padding: 5px 10px; font-size: 12px; }
+    #modal .modal-info { max-width: 94vw; font-size: 12px; }
+    #modal .nav-prev { left: 8px; }
+    #modal .nav-next { right: 8px; }
+    #modal .image-stage { width: 100vw; height: 70vh; }
+    #modal video { max-width: 100vw; max-height: 72vh; border-radius: 0; }
+  }
+  /* 移动端 100vh 会被浏览器地址栏吃掉一截，有 dvh 就用 dvh */
+  @supports (height: 100dvh) {
+    @media (max-width: 900px) { #app-layout { height: 100dvh; } }
+  }
 </style>
 </head>
 <body>
@@ -2415,13 +2474,15 @@
     <div class="sidebar-footer">
       <div class="sidebar-footer-row">
         <span>随手拾起 · 片刻生活</span>
-        <span id="version-label">v1.4</span>
+        <span id="version-label">v1.5</span>
       </div>
       <button id="btn-clear-cache" class="btn-clear-cache" title="清理已缓存的封面海报，释放浏览器存储空间">
         🧹 清理缩略图缓存
       </button>
     </div>
   </aside>
+  <!-- 窄屏下侧栏抽屉的遮罩 -->
+  <div id="sidebar-backdrop"></div>
 
   <!-- 主内容展示区 -->
   <div id="main-wrap">
@@ -2558,7 +2619,7 @@
     <button id="modal-close" title="关闭 (Esc)">✕ 关闭</button>
   </div>
   <button class="nav-btn nav-prev" id="nav-prev">‹</button>
-  <video id="modal-video" controls autoplay></video>
+  <video id="modal-video" controls autoplay playsinline></video>
   <!-- 图片舞台：与 <video> 互斥显示 -->
   <div id="modal-image-stage" class="image-stage">
     <img id="modal-image" alt="" draggable="false">
@@ -2932,6 +2993,55 @@
   let feedPosterObs = null;
   let feedLoaded = new Set();
 
+  // ---------- 局域网模式：数据源适配层 ----------
+  // 页面由 server.mjs 托管时（平板 / 手机在同一 Wi-Fi 下打开），目录来自服务端而不是本机文件句柄。
+  // 条目结构与本地一致，只是没有 handle，多了 remote / folderId；下面几个函数把「取文件」统一起来，
+  // 其余代码（扫描之外）不区分来源。本地模式（file:// 或 npx serve）下 remoteInfo 恒为 null，行为不变。
+  let remoteInfo = null;         // GET /api/share/info 的结果；null = 本地模式
+  const REMOTE_ACTIVE_KEY = 'suishi_remote_active_folder';
+
+  function relPathOf(v) { return (v.path ? v.path + '/' : '') + v.name; }
+  function encodeRelPath(rel) { return rel.split('/').map(encodeURIComponent).join('/'); }
+  function mediaUrl(v) { return `/media/${v.folderId}/${encodeRelPath(relPathOf(v))}`; }
+  function remoteThumbUrl(v) { return `/thumb/${v.folderId}/${encodeRelPath(relPathOf(v))}`; }
+  function isBlobUrl(u) { return typeof u === 'string' && u.startsWith('blob:'); }
+  // 只回收 objectURL；远程的 http 路径不需要（也不该）回收
+  function revokeUrl(u) { if (isBlobUrl(u)) URL.revokeObjectURL(u); }
+
+  // 整个文件（图片解码 / 超大图缩放用）
+  async function getMediaBlob(v) {
+    if (v.handle) return v.handle.getFile();
+    const r = await fetch(mediaUrl(v));
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.blob();
+  }
+  // 文件头若干字节（解析图片尺寸 / EXIF），远程走 Range 只拿需要的那段
+  async function getMediaHead(v, bytes) {
+    if (v.handle) {
+      const f = await v.handle.getFile();
+      return f.slice(0, bytes).arrayBuffer();
+    }
+    const r = await fetch(mediaUrl(v), { headers: { Range: `bytes=0-${bytes - 1}` } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.arrayBuffer();
+  }
+  // 给 <video> / <img> 用的 src：本地是 objectURL（附带 File，调用方用完要 revokeUrl），远程直接是路径
+  async function getMediaSrc(v) {
+    if (v.handle) {
+      const file = await v.handle.getFile();
+      return { url: URL.createObjectURL(file), file };
+    }
+    return { url: mediaUrl(v), file: null };
+  }
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(blob);
+    });
+  }
+
   // ---------- 音量持久化管理 ----------
   function getSavedVolume() {
     const v = localStorage.getItem('suishi_volume');
@@ -3231,6 +3341,11 @@
   }
 
   async function saveFolderState() {
+    // 局域网模式的目录列表由服务端给出，不写进本地的收藏目录表，只记住上次打开的是哪个
+    if (remoteInfo) {
+      try { localStorage.setItem(REMOTE_ACTIVE_KEY, activeFolderId || ''); } catch {}
+      return;
+    }
     await idbSet('savedFolders', savedFolders);
     await idbSet('folderGroups', folderGroups);
     await idbSet('activeFolderId', activeFolderId);
@@ -3683,8 +3798,11 @@
       }
     });
 
-    actions.appendChild(renameBtn);
-    actions.appendChild(removeBtn);
+    // 远程目录由服务端启动参数决定，侧栏里不提供别名 / 移除
+    if (!folder.remote) {
+      actions.appendChild(renameBtn);
+      actions.appendChild(removeBtn);
+    }
 
     item.appendChild(icon);
     item.appendChild(details);
@@ -3692,6 +3810,7 @@
 
     item.addEventListener('click', () => {
       if (sidebarTooltip) sidebarTooltip.classList.remove('show');
+      closeMobileSidebar();
       if (currentView !== 'library') {
         showView('library');
         if (folder.id === activeFolderId) return;
@@ -3980,6 +4099,7 @@
   async function loadActiveFolder() {
     const cur = savedFolders.find(f => f.id === activeFolderId);
     if (!cur) return;
+    if (cur.remote) return loadRemoteFolder(cur);
 
     // 检查权限
     try {
@@ -4044,6 +4164,119 @@
 
     await restoreMediaMode(cur.id);
     render();
+  }
+
+  // ---------- 局域网模式：从服务端取目录清单 ----------
+  // 服务端 /api/share/list 返回的一行 → 媒体库条目（与 makeMediaItem 同构，只是没有句柄）
+  function makeRemoteItem(folderId, row) {
+    const stem = stemOf(row.name);
+    return {
+      remote: true,
+      folderId,
+      name: row.name,
+      path: row.path || '',
+      ext: extOf(row.name),
+      kind: kindOf(row.name) || 'video',
+      size: row.size,
+      mtime: row.mtime,
+      sidecarUrl: row.sidecar ? `/media/${folderId}/${encodeRelPath((row.path ? row.path + '/' : '') + stem + SIDECAR_SUFFIX)}` : null,
+    };
+  }
+
+  async function fetchRemoteList(folder, recursive) {
+    const r = await fetch(`/api/share/list?folder=${encodeURIComponent(folder.id)}&recursive=${recursive ? 1 : 0}`, { cache: 'no-store' });
+    if (r.status === 401) throw new Error('需要重新输入口令');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    return (data.files || []).map(row => makeRemoteItem(folder.id, row));
+  }
+
+  async function loadRemoteFolder(cur, { rescan = false } = {}) {
+    const label = cur.customName || cur.name;
+    if (!rescan) { allVideos = []; gridEl.innerHTML = ''; }
+    emptyState.style.display = 'none';
+    setStatus(`正在从「${remoteInfo.host || '电脑'}」读取「${label}」的清单…`);
+    setControlsEnabled(false);
+    if (!rescan) await loadFavoritesForActiveFolder();
+
+    const recursive = recursiveChk.checked;
+    let list = null;
+    let error = null;
+    try { list = await fetchRemoteList(cur, recursive); }
+    catch (err) { error = err; console.error('读取远程目录出错:', err); }
+
+    if (error) {
+      setStatus('');
+      setControlsEnabled(true);
+      btnRefresh.classList.remove('is-spinning');
+      gridEl.innerHTML = '';
+      emptyState.style.display = 'flex';
+      emptyState.innerHTML = `
+        <div class="empty-icon-wrap">📡</div>
+        <h3>连不上电脑上的随拾服务</h3>
+        <div class="hint">${escapeHtml(error.message || String(error))}<br>请确认电脑上的 <code>node server.mjs</code> 还在运行，且平板与电脑在同一 Wi-Fi 下。</div>
+        <button class="btn-accent" id="btn-remote-retry" style="margin-top:8px;">重试</button>`;
+      $('btn-remote-retry').addEventListener('click', () => location.reload());
+      return;
+    }
+
+    let addedCount = 0, removedCount = 0;
+    if (rescan) {
+      // 与本地 rescan 同样的增量合并：没变的条目沿用旧对象，缩略图 / 时长不用重来
+      const oldMap = new Map(allVideos.map(v => [relPathOf(v), v]));
+      const merged = [];
+      for (const item of list) {
+        const key = relPathOf(item);
+        const existing = oldMap.get(key);
+        if (existing) {
+          if (existing.mtime === item.mtime && existing.size === item.size) {
+            if (existing.sidecarUrl !== item.sidecarUrl) { existing.sidecarUrl = item.sidecarUrl; delete existing._sidecarPromise; }
+            merged.push(existing);
+          } else merged.push(item);
+          oldMap.delete(key);
+        } else { addedCount++; merged.push(item); }
+      }
+      removedCount = oldMap.size;
+      allVideos = merged;
+      await loadFavoritesForActiveFolder();
+    } else {
+      allVideos = list;
+    }
+
+    applyFolderCounts(cur);
+    saveFolderState();
+    renderSidebar();
+
+    setStatus('');
+    setControlsEnabled(true);
+    btnRefresh.classList.remove('is-spinning');
+    emptyState.style.display = allVideos.length ? 'none' : 'flex';
+    if (!allVideos.length) {
+      emptyState.innerHTML = `
+        <div class="empty-icon-wrap">🍃</div>
+        <h3>这里空空如也</h3>
+        <div class="hint">该目录（${recursive ? '含子文件夹' : '当前目录'}）未发现受支持的视频或图片文件。</div>`;
+    }
+
+    const topKeys = new Set(allVideos.map(topFolderOf));
+    hasFolderGroups = topKeys.size > 1;
+    if (!rescan) {
+      activeFolder = null;
+      await restoreMediaMode(cur.id);
+    } else {
+      const kc = countByKind(allVideos);
+      if ((mediaMode === 'image' && !kc.image) || (mediaMode === 'video' && !kc.video)) mediaMode = 'all';
+    }
+    render();
+
+    if (rescan) {
+      setStatus(addedCount || removedCount
+        ? `扫描完毕：新增 ${addedCount} 个，移除 ${removedCount} 个文件（${mediaSummary(allVideos)}）`
+        : `目录已是最新状态，共 ${mediaSummary(allVideos)}`);
+      setTimeout(() => {
+        if (statusBar.textContent.startsWith('扫描完毕') || statusBar.textContent.startsWith('目录已是最新')) setStatus('');
+      }, 4000);
+    }
   }
 
   // 扫描到的一个文件 → 媒体库条目（视频与图片共用同一结构，只差 kind）
@@ -4145,10 +4378,11 @@
   // ---------- 目录一键重新扫描 (增量感知) ----------
   async function rescanActiveFolder() {
     const cur = savedFolders.find(f => f.id === activeFolderId);
-    if (!cur || !cur.handle) return;
+    if (!cur || (!cur.handle && !cur.remote)) return;
     if (btnRefresh.classList.contains('is-spinning')) return;
 
     btnRefresh.classList.add('is-spinning');
+    if (cur.remote) return loadRemoteFolder(cur, { rescan: true });
     setStatus(`正在重新扫描「${cur.customName || cur.name}」…`);
     setControlsEnabled(false);
 
@@ -4249,6 +4483,7 @@
 
   async function safeDeleteVideo(v) {
     if (!v || !activeFolderId) return;
+    if (v.remote) { transientStatus('局域网模式只读：删除请在电脑上操作'); return; }
     const cur = savedFolders.find(f => f.id === activeFolderId);
     if (!cur || !cur.handle) return;
 
@@ -4361,6 +4596,7 @@
   // ---------- 视频重命名交互与底层实现 ----------
   function openRenameDialog(v) {
     if (!v) return;
+    if (v.remote) { transientStatus('局域网模式只读：重命名请在电脑上操作'); return; }
     renameTargetVideo = v;
     if (renameTitle) renameTitle.textContent = `重命名${kindLabel(v)}`;
     renameInput.value = stemOf(v.name);
@@ -4874,7 +5110,7 @@
 
     // 拾光笺存档的视频：来源徽标（具体站点等进入视口时读 sidecar 再补）
     let sourceBadge = null;
-    if (v.sidecarHandle) {
+    if (v.sidecarHandle || v.sidecarUrl) {
       sourceBadge = document.createElement('div');
       sourceBadge.className = 'source-badge other';
       sourceBadge.textContent = '⬇ 存档';
@@ -5142,8 +5378,7 @@
   async function readImageDimensions(v) {
     if (v._exifRead && v._w && v._h) return;
     try {
-      const file = await v.handle.getFile();
-      const buf = await file.slice(0, 256 * 1024).arrayBuffer();
+      const buf = await getMediaHead(v, 256 * 1024);
       const r = parseImageHeader(buf);
       if (r && r.w > 0 && r.h > 0) { v._w = r.w; v._h = r.h; }
       if (r && r.exif) applyExif(v, r.exif);
@@ -5155,6 +5390,7 @@
   async function displayUrlFor(v, file, url) {
     if (!(v._w && v._h && v._w * v._h > HUGE_IMAGE_PIXELS)) return { url, scaled: false };
     try {
+      if (!file) file = await getMediaBlob(v);   // 远程模式下调用方没有 File，这时才整张拉下来
       const bmp = await createImageBitmap(file, { resizeWidth: HUGE_IMAGE_MAX_W, resizeQuality: 'high', imageOrientation: 'from-image' });
       const canvas = document.createElement('canvas');
       canvas.width = bmp.width;
@@ -5170,7 +5406,7 @@
   // 图片缩略图：createImageBitmap 按 EXIF 方向转正并缩放到 320 宽；
   // cover 变体绘到 320×180（网格），natural 变体保留原始比例（瀑布流，最高 3:1 截断）
   async function extractImageThumbnail(v, variant = 'cover') {
-    const file = await v.handle.getFile();
+    const file = await getMediaBlob(v);
     let bmp = null;
     try {
       bmp = await createImageBitmap(file, { resizeWidth: 320, resizeQuality: 'medium', imageOrientation: 'from-image' });
@@ -5245,19 +5481,32 @@
         }
       }
 
-      // 2b. 视频：未命中缓存，进入离屏视频抽取管线
-      let file, url;
-      try {
-        file = await v.handle.getFile();
-        url = URL.createObjectURL(file);
-      } catch { return null; }
+      // 2b-1. 远程视频：电脑上有 ffmpeg 的话封面由服务端出，平板不用下载视频片段来抽帧
+      if (v.remote && remoteInfo && remoteInfo.thumbs) {
+        try {
+          const r = await fetch(remoteThumbUrl(v));
+          if (r.ok) {
+            const d = Number(r.headers.get('X-Duration'));
+            if (d > 0 && !v._duration) v._duration = d;
+            const dataUrl = await blobToDataUrl(await r.blob());
+            idbSetThumbnail(cacheKey, { dataUrl, duration: v._duration, cachedAt: Date.now() });
+            return dataUrl;
+          }
+        } catch {}
+        // 服务端出图失败就退回浏览器抽帧
+      }
+
+      // 2b-2. 视频：未命中缓存，进入离屏视频抽取管线
+      let url;
+      try { url = (await getMediaSrc(v)).url; } catch { return null; }
 
       return await new Promise((resolve) => {
         const vid = document.createElement('video');
         vid.muted = true;
+        vid.playsInline = true;
         vid.preload = 'metadata';
         vid.src = url;
-        const cleanup = () => URL.revokeObjectURL(url);
+        const cleanup = () => revokeUrl(url);
 
         vid.addEventListener('loadedmetadata', () => {
           if (isFinite(vid.duration)) v._duration = vid.duration;
@@ -5569,18 +5818,17 @@
     const idx = Number(slide.dataset.idx);
     if (feedLoaded.has(idx) || slide._loading) return;
     slide._loading = true;
-    let file;
-    try { file = await slide._srcVideo.handle.getFile(); } catch { slide._loading = false; return; }
+    let src;
+    try { src = await getMediaSrc(slide._srcVideo); } catch { slide._loading = false; return; }
     if (slide._image) {
       const v = slide._srcVideo;
       if (!v._exifRead) await readImageDimensions(v);
-      const url = URL.createObjectURL(file);
-      const disp = await displayUrlFor(v, file, url);
-      if (disp.scaled) URL.revokeObjectURL(url);
+      const disp = await displayUrlFor(v, src.file, src.url);
+      if (disp.scaled) revokeUrl(src.url);
       slide._objectUrl = disp.url;
       slide._image.src = disp.url;
     } else {
-      const url = URL.createObjectURL(file);
+      const url = src.url;
       slide._objectUrl = url;
       slide._video.src = url;
       slide._video.volume = getSavedVolume();
@@ -5604,7 +5852,7 @@
       slide._video.removeAttribute('src');
       slide._video.load();
     }
-    if (slide._objectUrl) { URL.revokeObjectURL(slide._objectUrl); slide._objectUrl = null; }
+    if (slide._objectUrl) { revokeUrl(slide._objectUrl); slide._objectUrl = null; }
     feedLoaded.delete(idx);
     slide.classList.remove('paused');
   }
@@ -5743,13 +5991,14 @@
     currentModalIndex = -1;
     modalVideo.pause();
 
-    let file;
-    try { file = await v.handle.getFile(); }
+    let src;
+    try { src = await getMediaSrc(v); }
     catch { alert('无法读取该文件，可能已被移动或删除。'); return; }
+    const file = src.file;
     currentModalIndex = idx;
 
-    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-    currentObjectUrl = URL.createObjectURL(file);
+    if (currentObjectUrl) revokeUrl(currentObjectUrl);
+    currentObjectUrl = src.url;
 
     const img = isImage(v);
     modal.classList.toggle('is-image', img);
@@ -5822,7 +6071,7 @@
     modalVideo.removeAttribute('src');
     modalVideo.load();
     clearImageStage();
-    if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    if (currentObjectUrl) { revokeUrl(currentObjectUrl); currentObjectUrl = null; }
     const lastIdx = currentModalIndex;
     currentModalIndex = -1;
     revealCardInGrid(lastIdx);
@@ -6984,12 +7233,18 @@
 
   // ----- sidecar（.suishi.json）读取与展示 -----
   function readSidecar(v) {
-    if (!v || !v.sidecarHandle) return Promise.resolve(null);
+    if (!v || (!v.sidecarHandle && !v.sidecarUrl)) return Promise.resolve(null);
     if (v._sidecarPromise) return v._sidecarPromise;
     v._sidecarPromise = (async () => {
       try {
-        const file = await v.sidecarHandle.getFile();
-        const data = JSON.parse(await file.text());
+        let text;
+        if (v.sidecarHandle) text = await (await v.sidecarHandle.getFile()).text();
+        else {
+          const r = await fetch(v.sidecarUrl);
+          if (!r.ok) return null;
+          text = await r.text();
+        }
+        const data = JSON.parse(text);
         return data && typeof data === 'object' ? data : null;
       } catch (e) {
         return null;
@@ -7170,17 +7425,120 @@
   }
 
   // ---------- 启动引导与持久化恢复 ----------
+  // ---------- 局域网模式：探测 / 口令 / 初始化 ----------
+  // 只有页面是从 server.mjs 同源加载时 /api/share/info 才会返回 JSON；file:// 与 npx serve 下都拿不到，走本地模式
+  async function detectRemoteShare() {
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return null;
+    try {
+      const r = await fetch('/api/share/info', { cache: 'no-store' });
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) return null;
+      const info = await r.json();
+      return info && info.app === 'suishi-share' ? info : null;
+    } catch { return null; }
+  }
+
+  function showRemoteLogin(message) {
+    emptyState.style.display = 'flex';
+    emptyState.innerHTML = `
+      <div class="empty-icon-wrap">🔑</div>
+      <h3>输入口令连接「${escapeHtml(remoteInfo.host || '电脑')}」</h3>
+      <div class="hint">电脑上启动随拾分享服务时设置了口令，输入后即可浏览。</div>
+      <form id="remote-login-form" style="display:flex; gap:8px; margin-top:6px; width:min(320px, 100%);">
+        <input id="remote-token" class="rename-input" type="password" autocomplete="current-password" placeholder="口令" style="flex:1; padding:8px 12px; border:1.5px solid var(--border); border-radius:var(--radius-md); font-size:14px; background:var(--bg-surface); color:var(--text-main); outline:none;">
+        <button type="submit" class="btn-accent">连接</button>
+      </form>
+      <div id="remote-login-msg" style="font-size:12px; color:var(--danger); min-height:18px;">${escapeHtml(message || '')}</div>`;
+    const form = $('remote-login-form');
+    const input = $('remote-token');
+    setTimeout(() => input.focus(), 50);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); } });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('remote-login-msg');
+      msg.textContent = '';
+      try {
+        const r = await fetch('/api/share/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: input.value }),
+        });
+        if (!r.ok) { msg.textContent = r.status === 401 ? '口令不正确' : `连接失败（HTTP ${r.status}）`; input.select(); return; }
+        const info = await detectRemoteShare();
+        if (!info || !info.authed) { msg.textContent = '登录后仍未通过验证，请重试'; return; }
+        remoteInfo = info;
+        await initRemoteMode();
+      } catch (err) {
+        msg.textContent = '连接失败：' + (err.message || err);
+      }
+    });
+  }
+
+  async function initRemoteMode() {
+    document.body.classList.add('remote-mode');
+    const brandSub = document.querySelector('.brand-sub');
+    if (brandSub) brandSub.textContent = `局域网 · ${remoteInfo.host || location.hostname}`;
+    document.title = `随拾 · ${remoteInfo.host || '局域网'}`;
+    if (remoteInfo.auth && !remoteInfo.authed) { showRemoteLogin(); return; }
+
+    savedFolders = (remoteInfo.folders || []).map(f => ({ id: f.id, name: f.name, remotePath: f.path, remote: true, addedAt: 0 }));
+    folderGroups = [];
+    let last = null;
+    try { last = localStorage.getItem(REMOTE_ACTIVE_KEY); } catch {}
+    activeFolderId = savedFolders.some(f => f.id === last) ? last : (savedFolders[0] ? savedFolders[0].id : null);
+    renderSidebar();
+    if (!activeFolderId) {
+      emptyState.style.display = 'flex';
+      emptyState.innerHTML = `
+        <div class="empty-icon-wrap">📡</div>
+        <h3>电脑上还没有共享任何目录</h3>
+        <div class="hint">在电脑上这样启动：<code>node server.mjs D:\\Videos</code>，把要看的目录作为参数传进去。</div>`;
+      return;
+    }
+    await loadActiveFolder();
+  }
+
+  // 窄屏（平板竖屏 / 手机）下侧栏变成抽屉：从左滑出，点空白处收起
+  const mobileMq = window.matchMedia('(max-width: 900px)');
+  const sidebarBackdrop = $('sidebar-backdrop');
+  function isMobileLayout() { return mobileMq.matches; }
+  function openMobileSidebar() {
+    sidebarEl.classList.remove('collapsed');
+    sidebarEl.classList.add('mobile-open');
+    if (sidebarBackdrop) sidebarBackdrop.classList.add('show');
+  }
+  function closeMobileSidebar() {
+    if (!sidebarEl.classList.contains('mobile-open')) return;
+    sidebarEl.classList.remove('mobile-open');
+    if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+  }
+  if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+  mobileMq.addEventListener('change', () => {
+    if (isMobileLayout()) sidebarEl.classList.remove('collapsed');
+    else closeMobileSidebar();
+  });
+
   async function bootstrap() {
     ensureFavicon();
     initSidebar();
     renderSidebar();
+    if (isMobileLayout()) sidebarEl.classList.remove('collapsed');
     if ($('btn-open-sidebar')) {
       $('btn-open-sidebar').addEventListener('click', () => {
+        if (isMobileLayout()) {
+          if (sidebarEl.classList.contains('mobile-open')) closeMobileSidebar(); else openMobileSidebar();
+          return;
+        }
         sidebarEl.classList.toggle('collapsed');
         localStorage.setItem('suishi_sidebar_collapsed', sidebarEl.classList.contains('collapsed'));
         if (sidebarTooltip) sidebarTooltip.classList.remove('show');
       });
     }
+
+    remoteInfo = await detectRemoteShare();
+    if (remoteInfo) {
+      await initRemoteMode();
+      return;
+    }
+
     if (!window.showDirectoryPicker) {
       setStatus('提示：当前浏览器不支持本地文件夹原生读写，推荐使用 Chrome / Edge。');
       return;

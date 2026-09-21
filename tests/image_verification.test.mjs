@@ -209,7 +209,7 @@ test('扫描、卡片、播放器与 Feed 都按 kind 分流', () => {
   assert.match(htmlContent, /<option value="taken">按拍摄时间<\/option>/, '排序应有「按拍摄时间」');
   assert.match(htmlContent, /id=["']btn-layout["']/, '应有瀑布流切换按钮');
   assert.match(htmlContent, /id=["']image-play-btn["']/, '应有幻灯放映按钮');
-  assert.match(htmlContent, /<span id="version-label">v1\.4<\/span>/, '版本号应升到 v1.4');
+  assert.match(htmlContent, /<span id="version-label">v1\.[5-9]<\/span>/, '版本号应不低于 v1.5');
   assert.match(scriptCode, /function imageOverflowsVertically\(/, '滚轮应区分翻页与纵向平移');
   assert.match(scriptCode, /if \(e\.ctrlKey \|\| e\.metaKey\) \{\s*zoomImageAt/, 'Ctrl+滚轮缩放');
   assert.match(scriptCode, /imageClickTimer = setTimeout\(\(\) => \{ if \(modal\.classList\.contains\('is-image'\)\) closeModal\(\); \}/, '单击图片应关闭查看器');
