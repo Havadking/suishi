@@ -3,22 +3,11 @@
   "configurations": [
     {
       "name": "suishi",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "serve",
-        "-l",
-        "8964",
-        "."
-      ],
-      "port": 8964
-    },
-    {
-      "name": "share",
       "runtimeExecutable": "node",
       "runtimeArgs": [
         "server.mjs"
       ],
-      "port": 8970
+      "port": 8964
     }
   ]
 }

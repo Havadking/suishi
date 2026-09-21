@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// 随拾 · 局域网分享服务（可选伴生进程，零依赖，只用 Node 内置模块）
+// 随拾 · 本机服务（零依赖，只用 Node 内置模块）
 //
-// 在电脑上把若干本地目录以 HTTP 的方式共享给同一局域网内的平板 / 手机：
-//   node server.mjs D:\Videos E:\Clips            共享两个目录，默认端口 8970
+// 既托管 index.html（电脑端 http://localhost:8964 照旧用本地文件句柄），也把 share.json 里列出的目录
+// 以 HTTP 方式共享给同一局域网内的平板 / 手机（用 http://<本机IP>:8964 打开时页面进入「局域网模式」）。
+//   node server.mjs                                读取同目录下的 share.json，默认端口 8964
+//   node server.mjs D:\Videos E:\Clips            也可以直接把目录写在参数里
 //   node server.mjs --port 9000 --token 1234 D:\Videos
-//   node server.mjs                                不带参数时读取同目录下的 share.json
 //
-// share.json 示例：{ "folders": ["D:\\Videos"], "port": 8970, "token": "" }
+// share.json 示例：{ "folders": ["D:\\Videos"], "port": 8964, "token": "" }
 //
-// 提供的接口（前端 index.html 在同源下探测到 /api/share/info 后进入「局域网模式」）：
+// 提供的接口：
 //   GET  /                                页面本身
 //   GET  /api/share/info                  服务信息与共享目录列表
 //   POST /api/share/login  {token}        设置口令 Cookie（仅在启动时给了 --token 才需要）
@@ -65,18 +66,17 @@ function parseArgs(argv) {
   return opts;
 }
 function printUsage() {
-  console.log(`用法：node server.mjs [--port 8970] [--token 口令] [--no-thumbs] <目录> [<目录>...]
-不带目录参数时读取 share.json（{ "folders": [...], "port": 8970, "token": "" }）。`);
+  console.log(`用法：node server.mjs [--port 8964] [--token 口令] [--no-thumbs] [<目录> ...]
+不带目录参数时读取 share.json（{ "folders": [...], "port": 8964, "token": "" }）。`);
 }
 
 const cli = parseArgs(process.argv.slice(2));
 let fileCfg = {};
 try { fileCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'share.json'), 'utf8')); } catch {}
-const PORT = cli.port || Number(fileCfg.port) || 8970;
+const PORT = cli.port || Number(fileCfg.port) || 8964;
 const TOKEN = (cli.token != null ? cli.token : (fileCfg.token || '')).trim();
 const THUMBS_WANTED = cli.thumbs && fileCfg.thumbs !== false;
 const folderInputs = cli.folders.length ? cli.folders : (Array.isArray(fileCfg.folders) ? fileCfg.folders : []);
-if (!folderInputs.length) { printUsage(); process.exit(1); }
 
 // 目录 id 由绝对路径哈希得来：重启后不变，平板上的收藏 / 续播记录才能对得上
 const folders = [];
@@ -89,7 +89,7 @@ for (const p of folderInputs) {
   if (folders.some(f => f.id === id)) continue;
   folders.push({ id, name: path.basename(abs) || abs, root: abs });
 }
-if (!folders.length) { console.error('没有可用的目录，退出。'); process.exit(1); }
+// 没有共享目录也照样起：电脑端本地模式只需要页面本身；平板端会看到「电脑上还没有共享任何目录」
 
 // ---------- 口令（可选） ----------
 const COOKIE_NAME = 'suishi_share';
@@ -396,7 +396,7 @@ const server = http.createServer((req, res) => {
   });
 });
 server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') console.error(`端口 ${PORT} 已被占用，换一个：node server.mjs --port 9000 ...`);
+  if (err.code === 'EADDRINUSE') console.error(`端口 ${PORT} 已被占用，换一个：node server.mjs --port 9000 ...（或先停掉旧的 npx serve）`);
   else console.error(err);
   process.exit(1);
 });
@@ -405,13 +405,17 @@ server.listen(PORT, '0.0.0.0', () => {
   for (const list of Object.values(os.networkInterfaces())) {
     for (const ni of list || []) if (ni.family === 'IPv4' && !ni.internal) ips.push(ni.address);
   }
-  console.log('随拾 · 局域网分享服务已启动');
-  console.log('共享目录：');
-  for (const f of folders) console.log(`  📁 ${f.name}  →  ${f.root}`);
-  console.log(`封面：${ffmpegOk ? 'ffmpeg 服务端生成' : (THUMBS_WANTED ? '未找到 ffmpeg，由平板端浏览器自行抽帧（较慢）' : '已关闭服务端生成')}`);
-  console.log(`口令：${TOKEN ? '已启用' : '未设置（同一局域网内任何设备都可访问；可用 --token 加口令）'}`);
-  console.log('平板 / 手机在同一 Wi-Fi 下打开：');
+  console.log('随拾已启动');
+  console.log(`电脑：http://localhost:${PORT}/`);
+  console.log('平板 / 手机（同一 Wi-Fi）：');
   for (const ip of ips) console.log(`  http://${ip}:${PORT}/`);
   if (!ips.length) console.log(`  http://<本机IP>:${PORT}/`);
-  console.log(`本机：http://localhost:${PORT}/   （Ctrl+C 停止）`);
+  if (folders.length) {
+    console.log('共享给平板的目录（share.json）：');
+    for (const f of folders) console.log(`  📁 ${f.name}  →  ${f.root}`);
+  } else {
+    console.log('共享给平板的目录：无——把电脑端在看的目录路径填进 share.json 的 folders 里再重启');
+  }
+  console.log(`封面：${ffmpegOk ? 'ffmpeg 服务端生成' : (THUMBS_WANTED ? '未找到 ffmpeg，由平板端浏览器自行抽帧（较慢）' : '已关闭服务端生成')}`);
+  console.log(`口令：${TOKEN ? '已启用' : '未设置（同一局域网内任何设备都可访问；share.json 里填 token 可加口令）'}`);
 });

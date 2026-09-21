@@ -2994,9 +2994,9 @@
   let feedLoaded = new Set();
 
   // ---------- 局域网模式：数据源适配层 ----------
-  // 页面由 server.mjs 托管时（平板 / 手机在同一 Wi-Fi 下打开），目录来自服务端而不是本机文件句柄。
+  // 平板 / 手机通过局域网地址打开 server.mjs 托管的页面时，目录来自服务端（share.json）而不是本机文件句柄。
   // 条目结构与本地一致，只是没有 handle，多了 remote / folderId；下面几个函数把「取文件」统一起来，
-  // 其余代码（扫描之外）不区分来源。本地模式（file:// 或 npx serve）下 remoteInfo 恒为 null，行为不变。
+  // 其余代码（扫描之外）不区分来源。电脑端（file:// 或 localhost）remoteInfo 恒为 null，行为不变。
   let remoteInfo = null;         // GET /api/share/info 的结果；null = 本地模式
   const REMOTE_ACTIVE_KEY = 'suishi_remote_active_folder';
 
@@ -7426,9 +7426,11 @@
 
   // ---------- 启动引导与持久化恢复 ----------
   // ---------- 局域网模式：探测 / 口令 / 初始化 ----------
-  // 只有页面是从 server.mjs 同源加载时 /api/share/info 才会返回 JSON；file:// 与 npx serve 下都拿不到，走本地模式
+  // 电脑端（file:// 或 http://localhost）永远走本地模式，用的是本机文件句柄；
+  // 只有从局域网地址（平板 / 手机）打开且 server.mjs 同源响应 /api/share/info 时才进入局域网模式
   async function detectRemoteShare() {
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return null;
+    if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return null;
     try {
       const r = await fetch('/api/share/info', { cache: 'no-store' });
       if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) return null;
