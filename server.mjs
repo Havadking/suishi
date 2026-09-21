@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 // 随拾 · 本机服务（零依赖，只用 Node 内置模块）
 //
-// 既托管 index.html（电脑端 http://localhost:8964 照旧用本地文件句柄），也把 share.json 里列出的目录
+// 既托管 index.html（电脑端 http://localhost:8964 照旧用本地文件句柄），也把电脑端侧栏里的目录
 // 以 HTTP 方式共享给同一局域网内的平板 / 手机（用 http://<本机IP>:8964 打开时页面进入「局域网模式」）。
-//   node server.mjs                                读取同目录下的 share.json，默认端口 8964
-//   node server.mjs D:\Videos E:\Clips            也可以直接把目录写在参数里
-//   node server.mjs --port 9000 --token 1234 D:\Videos
 //
-// share.json 示例：{ "folders": ["D:\\Videos"], "port": 8964, "token": "" }
+// 平板能看哪些目录跟着电脑端走：电脑端页面每次目录列表变化都会 POST /api/share/sync 把侧栏目录
+// （名字 + 顶层几个条目的名字/大小作为指纹）发过来；浏览器不给绝对路径，服务端拿指纹在本机各盘里
+// 找到对应目录后记进 share.json。电脑端移除目录，这里也跟着移除。
+//   node server.mjs                                默认端口 8964
+//   node server.mjs --port 9000 --token 1234
+//   node server.mjs D:\Videos                      也可以手动追加固定共享的目录（不参与同步）
+//
+// share.json：{ "port": 8964, "token": "", "thumbs": true, "folders": [ { "pcId": "f_…", "name": "…", "path": "…" }, "D:\\Videos" ] }
+//   对象是从电脑端同步来的（服务端维护），字符串是手动写死的。
 //
 // 提供的接口：
 //   GET  /                                页面本身
 //   GET  /api/share/info                  服务信息与共享目录列表
+//   POST /api/share/sync   {folders}      电脑端同步侧栏目录（只接受本机回环地址的请求）
 //   POST /api/share/login  {token}        设置口令 Cookie（仅在启动时给了 --token 才需要）
 //   GET  /api/share/list?folder=ID&recursive=1
 //   GET  /media/ID/相对路径                 媒体文件（支持 HTTP Range，拖进度条 / iOS 依赖它）
@@ -71,25 +77,173 @@ function printUsage() {
 }
 
 const cli = parseArgs(process.argv.slice(2));
+const SHARE_JSON = path.join(__dirname, 'share.json');
 let fileCfg = {};
-try { fileCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'share.json'), 'utf8')); } catch {}
+try { fileCfg = JSON.parse(fs.readFileSync(SHARE_JSON, 'utf8')); } catch {}
 const PORT = cli.port || Number(fileCfg.port) || 8964;
 const TOKEN = (cli.token != null ? cli.token : (fileCfg.token || '')).trim();
 const THUMBS_WANTED = cli.thumbs && fileCfg.thumbs !== false;
-const folderInputs = cli.folders.length ? cli.folders : (Array.isArray(fileCfg.folders) ? fileCfg.folders : []);
 
-// 目录 id 由绝对路径哈希得来：重启后不变，平板上的收藏 / 续播记录才能对得上
-const folders = [];
-for (const p of folderInputs) {
-  const abs = path.resolve(String(p));
-  let st = null;
-  try { st = fs.statSync(abs); } catch {}
-  if (!st || !st.isDirectory()) { console.error(`跳过：不是目录 → ${abs}`); continue; }
-  const id = 'r_' + crypto.createHash('sha1').update(abs.toLowerCase()).digest('hex').slice(0, 10);
-  if (folders.some(f => f.id === id)) continue;
-  folders.push({ id, name: path.basename(abs) || abs, root: abs });
+// share.json 里的 folders：字符串 = 手动写死；对象 { pcId, name, path } = 从电脑端同步来的
+const manualFolders = [];
+const syncedFolders = [];
+for (const item of [...(Array.isArray(fileCfg.folders) ? fileCfg.folders : []), ...cli.folders]) {
+  if (typeof item === 'string') manualFolders.push(item);
+  else if (item && typeof item === 'object' && item.pcId && item.path) syncedFolders.push({ pcId: String(item.pcId), name: String(item.name || ''), path: String(item.path) });
 }
+
+// 对外暴露给平板的目录表（id 由绝对路径哈希得来：重启后不变，平板上的收藏 / 续播记录才能对得上）
+const folders = [];
+function folderIdFor(abs) { return 'r_' + crypto.createHash('sha1').update(abs.toLowerCase()).digest('hex').slice(0, 10); }
+function rebuildFolders() {
+  folders.length = 0;
+  const add = (p, name) => {
+    const abs = path.resolve(String(p));
+    let st = null;
+    try { st = fs.statSync(abs); } catch {}
+    if (!st || !st.isDirectory()) { console.error(`跳过：不是目录 → ${abs}`); return; }
+    const id = folderIdFor(abs);
+    if (folders.some(f => f.id === id)) return;
+    folders.push({ id, name: name || path.basename(abs) || abs, root: abs });
+  };
+  for (const f of syncedFolders) add(f.path, f.name);
+  for (const p of manualFolders) add(p);
+}
+rebuildFolders();
 // 没有共享目录也照样起：电脑端本地模式只需要页面本身；平板端会看到「电脑上还没有共享任何目录」
+
+let saveChain = Promise.resolve();
+function saveShareJson() {
+  saveChain = saveChain.then(async () => {
+    const out = { ...fileCfg, port: PORT, token: fileCfg.token || '', thumbs: fileCfg.thumbs !== false,
+      folders: [...syncedFolders.map(f => ({ pcId: f.pcId, name: f.name, path: f.path })), ...manualFolders] };
+    await fsp.writeFile(SHARE_JSON, JSON.stringify(out, null, 2) + '\n', 'utf8');
+  }).catch((e) => console.error('写 share.json 失败:', e));
+  return saveChain;
+}
+
+// ---------- 用指纹在本机磁盘上定位电脑端选过的目录 ----------
+// 浏览器只给目录名和里面的条目，不给绝对路径。电脑端把顶层前若干条目的名字 / 大小发过来当指纹，
+// 这里按目录名广度优先搜各个盘（跳过系统目录，深度有限），找到名字相同且指纹条目都对得上的第一个目录。
+const SEARCH_SKIP = new Set(['windows', 'program files', 'program files (x86)', 'programdata', '$recycle.bin',
+  'system volume information', 'appdata', 'node_modules', '.git', '.suishi-cache', 'recovery', 'perflogs', 'msocache',
+  'windows.old', '$windows.~bt', '$windows.~ws', 'onedrivetemp']);
+const SEARCH_MAX_DEPTH = 7;
+const SEARCH_TIMEOUT_MS = 90 * 1000;
+
+async function searchRoots() {
+  if (process.env.SUISHI_SEARCH_ROOTS) return process.env.SUISHI_SEARCH_ROOTS.split(path.delimiter).filter(Boolean);
+  if (process.platform !== 'win32') return [os.homedir()];
+  const roots = [];
+  for (let c = 65; c <= 90; c++) {
+    const r = String.fromCharCode(c) + ':\\';
+    try { const st = await fsp.stat(r); if (st.isDirectory()) roots.push(r); } catch {}
+  }
+  return roots;
+}
+
+async function fingerprintMatches(dir, sample) {
+  for (const e of sample) {
+    if (!e || typeof e.name !== 'string' || e.name.includes('/') || e.name.includes('\\')) return false;
+    let st;
+    try { st = await fsp.stat(path.join(dir, e.name)); } catch { return false; }
+    if (e.kind === 'directory') { if (!st.isDirectory()) return false; }
+    else {
+      if (!st.isFile()) return false;
+      if (typeof e.size === 'number' && st.size !== e.size) return false;
+    }
+  }
+  return true;
+}
+
+async function locateFolder(name, sample) {
+  const want = String(name).toLowerCase();
+  const started = Date.now();
+  let level = await searchRoots();
+  for (let depth = 0; depth <= SEARCH_MAX_DEPTH && level.length; depth++) {
+    const next = [];
+    // 每层分批并发读目录
+    for (let i = 0; i < level.length; i += 32) {
+      if (Date.now() - started > SEARCH_TIMEOUT_MS) return null;
+      const batch = level.slice(i, i + 32);
+      const results = await Promise.all(batch.map(async (dir) => {
+        let entries;
+        try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return []; }
+        const subs = [];
+        for (const e of entries) {
+          if (!e.isDirectory() || e.isSymbolicLink()) continue;
+          const lower = e.name.toLowerCase();
+          if (SEARCH_SKIP.has(lower) || (lower.startsWith('.') && lower !== '.')) continue;
+          subs.push(path.join(dir, e.name));
+        }
+        return subs;
+      }));
+      for (const subs of results) {
+        for (const d of subs) {
+          if (path.basename(d).toLowerCase() === want && await fingerprintMatches(d, sample)) return d;
+          next.push(d);
+        }
+      }
+    }
+    level = next;
+  }
+  return null;
+}
+
+let syncChain = Promise.resolve();
+// 电脑端发来的侧栏目录全集：已定位过的沿用，新的去磁盘上找，不在名单里的移除
+function syncFolders(incoming) {
+  const run = async () => {
+    const result = { resolved: [], missing: [] };
+    const keep = [];
+    for (const f of incoming) {
+      const pcId = String(f.id || '');
+      const name = String(f.name || '');
+      if (!pcId || !name) continue;
+      const displayName = String(f.customName || name);
+      const sample = Array.isArray(f.sample) ? f.sample.slice(0, 32) : [];
+      const known = syncedFolders.find(x => x.pcId === pcId);
+      if (known && path.basename(known.path).toLowerCase() === name.toLowerCase()
+          && await fsp.stat(known.path).then(st => st.isDirectory()).catch(() => false)
+          && (!sample.length || await fingerprintMatches(known.path, sample))) {
+        known.name = displayName;
+        keep.push(known);
+        result.resolved.push({ id: pcId, path: known.path });
+        continue;
+      }
+      if (!sample.length && !f.readable) {
+        // 电脑端这个目录还没重新授权，指纹发不过来；先保留旧记录（如果有）
+        if (known) { keep.push(known); result.resolved.push({ id: pcId, path: known.path }); }
+        else result.missing.push(pcId);
+        continue;
+      }
+      const found = await locateFolder(name, sample);
+      if (found) {
+        keep.push({ pcId, name: displayName, path: found });
+        result.resolved.push({ id: pcId, path: found });
+        console.log(`已定位电脑端目录「${displayName}」→ ${found}`);
+      } else {
+        result.missing.push(pcId);
+        console.log(`没在本机磁盘上找到电脑端目录「${displayName}」，平板端看不到它`);
+      }
+    }
+    const before = JSON.stringify(syncedFolders);
+    syncedFolders.length = 0;
+    syncedFolders.push(...keep);
+    if (JSON.stringify(syncedFolders) !== before) {
+      rebuildFolders();
+      await saveShareJson();
+    }
+    return result;
+  };
+  syncChain = syncChain.then(run, run);
+  return syncChain;
+}
+
+function isLoopback(req) {
+  const a = req.socket.remoteAddress || '';
+  return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
+}
 
 // ---------- 口令（可选） ----------
 const COOKIE_NAME = 'suishi_share';
@@ -335,6 +489,16 @@ async function handle(req, res) {
       folders: authed ? folders.map(f => ({ id: f.id, name: f.name, path: f.root })) : [],
     });
   }
+  if (p === '/api/share/sync') {
+    // 决定「平板能看什么」的接口，只信任本机（电脑端页面在 localhost 上）
+    if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
+    if (!isLoopback(req)) return sendJson(res, 403, { error: '只接受本机请求' });
+    let body = {};
+    try { body = JSON.parse(await readBody(req, 512 * 1024) || '{}'); } catch {}
+    const incoming = Array.isArray(body.folders) ? body.folders : [];
+    const result = await syncFolders(incoming);
+    return sendJson(res, 200, { ...result, folders: folders.map(f => ({ id: f.id, name: f.name, path: f.root })) });
+  }
   if (p === '/api/share/login') {
     if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
     let body = {};
@@ -411,10 +575,10 @@ server.listen(PORT, '0.0.0.0', () => {
   for (const ip of ips) console.log(`  http://${ip}:${PORT}/`);
   if (!ips.length) console.log(`  http://<本机IP>:${PORT}/`);
   if (folders.length) {
-    console.log('共享给平板的目录（share.json）：');
+    console.log('共享给平板的目录（跟电脑端侧栏同步）：');
     for (const f of folders) console.log(`  📁 ${f.name}  →  ${f.root}`);
   } else {
-    console.log('共享给平板的目录：无——把电脑端在看的目录路径填进 share.json 的 folders 里再重启');
+    console.log('共享给平板的目录：暂无——在电脑上打开一次 http://localhost:' + PORT + '/，侧栏里的目录会自动同步过来');
   }
   console.log(`封面：${ffmpegOk ? 'ffmpeg 服务端生成' : (THUMBS_WANTED ? '未找到 ffmpeg，由平板端浏览器自行抽帧（较慢）' : '已关闭服务端生成')}`);
   console.log(`口令：${TOKEN ? '已启用' : '未设置（同一局域网内任何设备都可访问；share.json 里填 token 可加口令）'}`);

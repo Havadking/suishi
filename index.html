@@ -2999,6 +2999,7 @@
   // 其余代码（扫描之外）不区分来源。电脑端（file:// 或 localhost）remoteInfo 恒为 null，行为不变。
   let remoteInfo = null;         // GET /api/share/info 的结果；null = 本地模式
   const REMOTE_ACTIVE_KEY = 'suishi_remote_active_folder';
+  let localShareServer = false;  // 电脑端页面由 server.mjs 托管（localhost）：侧栏目录会同步给它，平板才看得到
 
   function relPathOf(v) { return (v.path ? v.path + '/' : '') + v.name; }
   function encodeRelPath(rel) { return rel.split('/').map(encodeURIComponent).join('/'); }
@@ -3349,6 +3350,52 @@
     await idbSet('savedFolders', savedFolders);
     await idbSet('folderGroups', folderGroups);
     await idbSet('activeFolderId', activeFolderId);
+  }
+
+  // ---------- 把电脑端侧栏目录同步给 server.mjs（平板端看到的目录跟这里一致） ----------
+  // 浏览器不给目录的绝对路径，只能把目录名 + 顶层前若干条目的名字 / 大小当指纹发过去，由服务端在磁盘上定位
+  async function folderFingerprint(folder) {
+    const out = { id: folder.id, name: folder.name, customName: folder.customName || '', readable: false, sample: [] };
+    if (!folder.handle) return out;
+    try {
+      if (await folder.handle.queryPermission({ mode: 'read' }) !== 'granted') return out;
+      out.readable = true;
+      let n = 0;
+      for await (const entry of folder.handle.values()) {
+        if (entry.kind === 'file') {
+          let size = null;
+          try { size = (await entry.getFile()).size; } catch { continue; }
+          out.sample.push({ name: entry.name, kind: 'file', size });
+        } else {
+          out.sample.push({ name: entry.name, kind: 'directory' });
+        }
+        if (++n >= 24) break;
+      }
+    } catch {}
+    return out;
+  }
+
+  let shareSyncTimer = null;
+  function scheduleShareSync() {
+    if (!localShareServer) return;
+    clearTimeout(shareSyncTimer);
+    shareSyncTimer = setTimeout(() => { syncShareFolders().catch(() => {}); }, 800);
+  }
+  async function syncShareFolders() {
+    if (!localShareServer) return;
+    const list = await Promise.all(savedFolders.filter(f => f.handle).map(folderFingerprint));
+    const r = await fetch('/api/share/sync', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folders: list }),
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    // 只对已授权、指纹发过去了却仍没定位到的目录提示；没授权的等它下次打开再同步
+    const missing = (data.missing || []).filter(id => list.some(f => f.id === id && f.readable));
+    if (missing.length) {
+      const names = missing.map(id => { const f = savedFolders.find(x => x.id === id); return f ? (f.customName || f.name) : id; });
+      transientStatus(`平板端暂时看不到「${names.join('」「')}」：没能在本机磁盘上定位到这个目录`, 6000);
+    }
   }
 
   // ---------- 侧边栏折叠/展开与状态管理 ----------
@@ -3784,6 +3831,7 @@
         folder.customName = next.trim();
         saveFolderState();
         renderSidebar();
+        scheduleShareSync();
       }
     });
 
@@ -3965,6 +4013,7 @@
     }
     await saveFolderState();
     renderSidebar();
+    scheduleShareSync();
     if (activeFolderId) {
       switchFolder(activeFolderId);
     } else {
@@ -4164,6 +4213,7 @@
 
     await restoreMediaMode(cur.id);
     render();
+    scheduleShareSync();
   }
 
   // ---------- 局域网模式：从服务端取目录清单 ----------
@@ -7540,6 +7590,14 @@
       await initRemoteMode();
       return;
     }
+    // 电脑端：页面若是 server.mjs 托管的（localhost），把侧栏目录同步给它，平板端才有得看
+    if (location.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+      try {
+        const r = await fetch('/api/share/info', { cache: 'no-store' });
+        const info = r.ok && (r.headers.get('content-type') || '').includes('json') ? await r.json() : null;
+        localShareServer = !!(info && info.app === 'suishi-share');
+      } catch {}
+    }
 
     if (!window.showDirectoryPicker) {
       setStatus('提示：当前浏览器不支持本地文件夹原生读写，推荐使用 Chrome / Edge。');
@@ -7560,6 +7618,7 @@
           : savedFolders[0].id;
         renderSidebar();
         await loadActiveFolder();
+        scheduleShareSync();
       } else {
         renderSidebar();
         await migrateLegacyIDB();

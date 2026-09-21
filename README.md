@@ -190,18 +190,15 @@
 设计与分期见 [IMAGE_DESIGN.md](IMAGE_DESIGN.md)，可点击原型见 [prototypes/image-browser.html](prototypes/image-browser.html)。
 
 ### 4.10 「📡 局域网模式」：平板 / 手机看电脑里的视频（可选，v1.5）
-File System Access API 只能读运行浏览器那台设备自己的硬盘，平板打开页面拿不到电脑上的文件。v1.5 起 `npm run dev` 起的是 [`server.mjs`](server.mjs)（零依赖，只用 Node 内置模块，替代原来的 `npx serve`）：它托管页面，同时把 `share.json` 里列出的目录以 HTTP 方式共享给同一 Wi-Fi 下的设备。**只有这一个进程**——电脑端照旧开 `http://localhost:8964`，平板开 `http://<电脑IP>:8964`。
+File System Access API 只能读运行浏览器那台设备自己的硬盘，平板打开页面拿不到电脑上的文件。v1.5 起 `npm run dev` 起的是 [`server.mjs`](server.mjs)（零依赖，只用 Node 内置模块，替代原来的 `npx serve`）：它托管页面，同时把**电脑端侧栏里的目录**以 HTTP 方式共享给同一 Wi-Fi 下的设备。**只有这一个进程**——电脑端照旧开 `http://localhost:8964`，平板开 `http://<电脑IP>:8964`，看到的目录和电脑端一致。
 
 ```bash
-npm run dev            # 读取 share.json，端口 8964；第一次运行 Windows 防火墙会问一次，选「允许」
+npm run dev            # 端口 8964；第一次运行 Windows 防火墙会问一次，选「允许」
 ```
-`share.json`（已 gitignore，模板见 [share.example.json](share.example.json)）：
-```json
-{ "folders": ["E:/download/随拾下载", "D:/Videos"], "port": 8964, "token": "", "thumbs": true }
-```
-浏览器不会把你在电脑端选过的目录的绝对路径交给任何人，所以平板要看的目录得在这里列一次；改完在司命里点重启（或 Ctrl+C 再起）。
 
-- **前端怎么分流**：按访问地址——`file://` 和 `localhost` / `127.0.0.1` 永远是本地模式（本机文件句柄，和以前一模一样，连 `/api/share/info` 都不请求）；从局域网 IP 打开时探测同源 `/api/share/info`，拿到 JSON 才进入局域网模式。条目结构与本地一致，只是没有 `handle`、多了 `remote` / `folderId`；`getMediaBlob` / `getMediaHead` / `getMediaSrc` 三个适配函数把「取文件」统一起来，缩略图、Feed、播放器、图片查看器、EXIF、sidecar 读取都不区分来源，`<video>` 直接吃 `/media/...` 的 URL。
+- **目录怎么跟着电脑端走**：浏览器不会把选过的目录的绝对路径交给页面，所以电脑端页面（`localhost` 上）每次目录列表变化——载入、添加、移除、改别名——都把侧栏目录的**指纹**（目录名 + 顶层前 24 个条目的名字 / 大小）`POST /api/share/sync` 给服务端；服务端按目录名在各个盘上广度优先搜（跳过 Windows / Program Files / AppData / node_modules 等，最深 7 层，通常几十毫秒，找不到最多几秒），指纹全部对得上的第一个目录就是它，记进 `share.json`（`{ pcId, name, path }`），下次直接沿用。电脑端移除了，服务端也移除。这个接口只接受本机回环地址的请求。还没重新授权的目录发不出指纹，服务端保留旧记录、等它下次打开再核对；真找不到的会在状态栏提示「平板端暂时看不到 …」。
+- **前端怎么分流**：按访问地址——`file://` 和 `localhost` / `127.0.0.1` 永远是本地模式（本机文件句柄，和以前一模一样）；从局域网 IP 打开时探测同源 `/api/share/info`，拿到 JSON 才进入局域网模式。
+- **`share.json`**（已 gitignore）：端口、口令、`thumbs` 开关手动改；`folders` 由服务端维护，里面也可以手写字符串路径作为固定共享、不参与同步。条目结构与本地一致，只是没有 `handle`、多了 `remote` / `folderId`；`getMediaBlob` / `getMediaHead` / `getMediaSrc` 三个适配函数把「取文件」统一起来，缩略图、Feed、播放器、图片查看器、EXIF、sidecar 读取都不区分来源，`<video>` 直接吃 `/media/...` 的 URL。
 - **服务端**：`/api/share/list` 递归列目录（跳过隐藏目录、符号链接与回收站），`/media/ID/相对路径` 带完整 HTTP Range（拖进度条与 iOS Safari 都依赖它），路径逐段校验并做 `realpath` 防越界。电脑上有 `ffmpeg` 时 `/thumb/...` 由服务端出 320×180 封面（缓存在 `.suishi-cache/thumbs/`，响应头 `X-Duration` 带时长），平板就不用下载视频片段来抽帧；没有 ffmpeg 自动退回浏览器抽帧。
 - **口令**：`share.json` 里填 `token`（或命令行 `--token`）后所有接口需要 Cookie（`HttpOnly`，30 天），页面上会出现口令输入框；不设口令则同一局域网内任何设备可看。
 - **只读**：不提供删除 / 重命名接口，平板上相应按钮隐藏，快捷键触发时提示「请在电脑上操作」。星标、断点续播、缩略图缓存存在平板自己的 IndexedDB 里，目录 id 由绝对路径哈希得出，服务重启后仍对得上。

@@ -1,9 +1,6 @@
 {
-  "folders": [
-    "D:\\Videos",
-    "E:\\Clips"
-  ],
   "port": 8964,
   "token": "",
-  "thumbs": true
+  "thumbs": true,
+  "folders": []
 }
