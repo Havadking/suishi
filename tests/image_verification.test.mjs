@@ -51,7 +51,7 @@ test('HTML 包含看图功能所需的 DOM 元素与样式', () => {
   assert.match(htmlContent, /\.card-open-btn\s*\{/, '图片卡片应有 🔍 打开按钮样式');
   assert.match(htmlContent, /#modal\.is-image \.image-stage\s*\{\s*display:\s*block/, '图片舞台应随 .is-image 显示');
   assert.match(htmlContent, /#modal\.is-image video\s*\{\s*display:\s*none/, '图片模式下 <video> 应隐藏');
-  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*4\)/, '看图功能不需要升级 IDB 版本');
+  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*[4-9]\)/, '看图功能在 IDB 升级后正常兼容');
 });
 
 // ---------- 2. 语法完整性 ----------

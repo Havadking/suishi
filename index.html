@@ -22,6 +22,9 @@
     --accent-subtle: #FDF2EE;
     --accent-border: #F7D4C8;
     --secondary-accent: #6B8E7C;
+    --watched-color: #5A8F76;
+    --watched-bg: rgba(43, 76, 61, 0.88);
+    --watched-subtle: #EDF3F0;
     --danger: #E55353;
     --danger-subtle: #FDEDEC;
     --shadow-sm: 0 1px 3px rgba(65, 45, 30, 0.05), 0 1px 2px rgba(65, 45, 30, 0.04);
@@ -944,6 +947,18 @@
     color: #fff;
     box-shadow: 0 2px 6px rgba(232, 168, 56, 0.35);
   }
+  .folder-pill.watched-pill.active {
+    background: var(--watched-color);
+    border-color: var(--watched-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(90, 143, 118, 0.35);
+  }
+  .folder-pill.unwatched-pill.active {
+    background: #6B7280;
+    border-color: #6B7280;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(107, 114, 128, 0.35);
+  }
   .folder-pill .dot {
     width: 8px;
     height: 8px;
@@ -1234,6 +1249,78 @@
     right: 7px;
   }
 
+  .card-mark-btn {
+    position: absolute;
+    top: 7px;
+    right: 77px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(28, 23, 20, 0.75);
+    backdrop-filter: blur(4px);
+    color: rgba(255, 255, 255, 0.85);
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    z-index: 3;
+    transition: background 0.15s, transform 0.15s, color 0.15s;
+  }
+  .card:hover .card-mark-btn,
+  .card-mark-btn.is-watched {
+    display: flex;
+  }
+  .card-mark-btn.is-watched {
+    color: #A7F3D0;
+    background: rgba(28, 48, 38, 0.85);
+  }
+  .card-mark-btn:hover {
+    background: var(--watched-color);
+    color: #fff;
+    transform: scale(1.1);
+  }
+  .card.is-non-playable .card-mark-btn {
+    right: 42px;
+  }
+
+  /* 缩略图左下角常驻胶囊徽标 (方案 A 推荐) */
+  .watched-pill-badge {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+    background: var(--watched-bg);
+    backdrop-filter: blur(4px);
+    color: #E2F4EB;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: background 0.15s, transform 0.15s, color 0.15s;
+  }
+  .watched-pill-badge:hover {
+    background: #2E5A47;
+    color: #FFFFFF;
+    transform: scale(1.05);
+  }
+  .watched-pill-badge.multi {
+    background: rgba(43, 76, 61, 0.95);
+    border: 1px solid rgba(134, 239, 172, 0.4);
+    color: #A7F3D0;
+  }
+  .watched-pill-badge.multi-high {
+    background: rgba(120, 53, 15, 0.9);
+    border: 1px solid rgba(253, 230, 138, 0.4);
+    color: #FDE68A;
+  }
+
   .card-actions {
     margin-left: auto;
     display: inline-flex;
@@ -1242,7 +1329,8 @@
     flex-shrink: 0;
   }
   .card-rename-btn,
-  .card-del-btn {
+  .card-del-btn,
+  .card-watch-btn {
     background: transparent;
     border: none;
     cursor: pointer;
@@ -1254,6 +1342,14 @@
     line-height: 1;
     display: inline-flex;
     align-items: center;
+  }
+  .card-watch-btn.is-watched {
+    opacity: 0.85;
+    color: var(--watched-color);
+  }
+  .card-watch-btn:hover {
+    opacity: 1;
+    background: var(--watched-subtle, rgba(90, 143, 118, 0.15));
   }
   .card-rename-btn:hover {
     opacity: 1;
@@ -1522,6 +1618,11 @@
     border-color: #F2C94C;
     background: rgba(30, 25, 20, 0.75);
   }
+  .feed-hud button#feed-watch.is-active {
+    color: #A7F3D0;
+    border-color: #5A8F76;
+    background: rgba(30, 48, 38, 0.85);
+  }
   .feed-counter {
     background: rgba(30, 25, 20, 0.55);
     backdrop-filter: blur(8px);
@@ -1589,6 +1690,11 @@
     background: rgba(242, 201, 76, 0.25);
     border-color: #F2C94C;
     color: #F2C94C;
+  }
+  #modal .modal-controls button#modal-watch.is-active {
+    background: rgba(90, 143, 118, 0.3);
+    border-color: #5A8F76;
+    color: #A7F3D0;
   }
   #modal .modal-controls button.danger:hover {
     background: rgba(229, 83, 83, 0.45);
@@ -2399,6 +2505,292 @@
   @supports (height: 100dvh) {
     @media (max-width: 900px) { #app-layout { height: 100dvh; } }
   }
+
+  /* ---------- 观看打卡与时间轴历史弹窗 ---------- */
+  #watch-history-modal {
+    z-index: 350;
+  }
+  .history-modal-dialog {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 520px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    animation: dialogIn 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  .hm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    background: #FAF8F5;
+  }
+  .hm-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .hm-icon-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--watched-subtle, #EDF3F0);
+    color: var(--watched-color, #5A8F76);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 1px solid rgba(90, 143, 118, 0.25);
+    flex-shrink: 0;
+  }
+  .hm-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hm-header p {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--text-light);
+    max-width: 340px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hm-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: var(--text-light);
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .hm-close-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+  }
+  .hm-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 14px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .hm-stat-col { text-align: center; }
+  .hm-stat-label { font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
+  .hm-stat-val { font-size: 16px; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+  .hm-stat-val.highlight { color: var(--watched-color, #5A8F76); }
+  .hm-stat-sep { width: 1px; height: 28px; background: var(--border-light); }
+  .hm-action-bar {
+    padding: 12px 20px;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-checkin {
+    flex: 1;
+    background: var(--watched-color, #5A8F76);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(90, 143, 118, 0.28);
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-checkin:hover { background: #4A7A64; transform: translateY(-1px); }
+  .btn-checkin:active { transform: translateY(0); }
+  .btn-custom-checkin {
+    background: var(--bg-surface);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-custom-checkin:hover { background: var(--bg-hover); border-color: var(--text-muted); }
+  .custom-form-wrap {
+    display: none;
+    padding: 12px 20px;
+    background: #FAF7F2;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .custom-form-wrap.open {
+    display: block;
+    animation: fadeIn 0.2s ease;
+  }
+  .form-row { display: flex; gap: 10px; margin-bottom: 4px; }
+  .form-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--text-main);
+  }
+  .btn-submit-custom {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-submit-custom:hover { background: var(--accent-hover); }
+  .hm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    position: relative;
+    max-height: 380px;
+  }
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--border);
+  }
+  .timeline-empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+  .timeline-empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+  .timeline-entry { position: relative; margin-bottom: 16px; }
+  .timeline-entry:last-child { margin-bottom: 0; }
+  .tl-dot {
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 3px solid var(--watched-color, #5A8F76);
+    box-shadow: 0 0 0 2px var(--bg-surface);
+  }
+  .timeline-entry.latest .tl-dot { border-color: var(--accent); background: var(--accent-subtle); }
+  .tl-content {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+  }
+  .timeline-entry:hover .tl-content { background: var(--bg-base); border-color: var(--border); }
+  .tl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .tl-tag { font-size: 11.5px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+  .tl-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--watched-subtle, #EDF3F0);
+    color: var(--watched-color, #5A8F76);
+    font-weight: 600;
+  }
+  .tl-badge.latest { background: var(--accent-subtle); color: var(--accent); }
+  .tl-del-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .timeline-entry:hover .tl-del-btn { opacity: 0.7; }
+  .tl-del-btn:hover { opacity: 1 !important; background: var(--danger-subtle); color: var(--danger); }
+  .tl-time { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tl-note {
+    margin-top: 6px;
+    padding: 4px 6px;
+    border-top: 1px dashed var(--border-light);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.015);
+    border-radius: 3px;
+    word-break: break-all;
+  }
+  .hm-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-light);
+    background: #FAF8F5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-light);
+  }
+  .btn-clear-all {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    font-size: 11.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .btn-clear-all:hover { background: var(--danger-subtle); }
+
+  /* 悬停微轻预览浮窗 */
+  #watch-popover {
+    position: fixed;
+    background: rgba(28, 23, 20, 0.94);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    font-size: 11.5px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s, transform 0.15s;
+    max-width: 240px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  #watch-popover.show { opacity: 1; transform: translateY(0); }
+  #watch-popover .pop-title { font-weight: 600; color: #A7F3D0; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+  #watch-popover .pop-time { color: rgba(255, 255, 255, 0.75); line-height: 1.4; }
+  #watch-popover .pop-hint { margin-top: 5px; font-size: 10px; color: rgba(255, 255, 255, 0.45); border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 3px; }
 </style>
 </head>
 <body>
@@ -2531,6 +2923,8 @@
         <option value="date">按修改时间</option>
         <option value="size">按文件大小</option>
         <option value="taken">按拍摄时间</option>
+        <option value="watch-count">按观看次数</option>
+        <option value="watch-date">按最近观看</option>
       </select>
       <button id="sort-dir" class="btn-normal" disabled title="切换升序/降序">↑</button>
       <label class="checkbox">
@@ -2612,6 +3006,7 @@
     <button id="modal-source" style="display:none;" title="打开原链接">🔗 原链接</button>
     <button id="modal-glean" style="display:none;" title="发送到拾光笺转写 / 查看转写 (G)">📝 拾光笺</button>
     <button id="modal-fav" title="星标收藏 (S)">⭐ 收藏</button>
+    <button id="modal-watch" title="查看观看记录与打卡 (W)">✓ 打卡</button>
     <button id="modal-rename" title="重命名当前视频 (F2)">✏️ 重命名</button>
     <button id="modal-delete" class="danger" title="删除当前文件 (Delete)">🗑️ 删除</button>
     <button id="modal-info-btn" style="display:none;" title="文件信息 (I)">ℹ 信息</button>
@@ -2651,6 +3046,7 @@
   <div style="display:flex;gap:8px;align-items:center;">
     <button id="feed-glean" style="display:none;" title="发送到拾光笺 (G)">📝</button>
     <button id="feed-fav" title="星标收藏 (S)">☆</button>
+    <button id="feed-watch" title="查看观看记录与打卡 (W)">✓</button>
     <button id="feed-rename" title="重命名当前视频 (F2)">✏️</button>
     <button id="feed-fullscreen" title="全屏 (F)">⛶</button>
     <button id="feed-mute" title="静音/取消静音">🔇</button>
@@ -2733,6 +3129,78 @@
   </div>
 </div>
 
+<!-- 观看历史记录与打卡弹窗 -->
+<div id="watch-history-modal" class="custom-dialog-backdrop">
+  <div class="history-modal-dialog" onclick="event.stopPropagation()">
+    <div class="hm-header">
+      <div class="hm-title-wrap">
+        <div class="hm-icon-badge">✓</div>
+        <div style="min-width:0;">
+          <h3 id="watch-modal-name">视频名称</h3>
+          <p id="watch-modal-meta">MP4 · 245 MB</p>
+        </div>
+      </div>
+      <button class="hm-close-btn" id="btn-watch-modal-close" title="关闭 (Esc)">✕</button>
+    </div>
+
+    <!-- 核心统计概览卡片 -->
+    <div class="hm-summary-bar">
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">累计观看</div>
+        <div class="hm-stat-val highlight" id="watch-stat-count">0 次</div>
+      </div>
+      <div class="hm-stat-sep"></div>
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">首次观看</div>
+        <div class="hm-stat-val" id="watch-stat-first">-</div>
+      </div>
+      <div class="hm-stat-sep"></div>
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">最近观看</div>
+        <div class="hm-stat-val" id="watch-stat-latest">-</div>
+      </div>
+    </div>
+
+    <!-- 快捷操作栏 -->
+    <div class="hm-action-bar">
+      <button class="btn-checkin" id="btn-watch-checkin">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>记为看过一次 (以当前时间打卡)</span>
+      </button>
+      <button class="btn-custom-checkin" id="btn-watch-toggle-custom">
+        <span>📅 补记历史时间</span>
+      </button>
+    </div>
+
+    <!-- 自定义补打卡折叠表单 -->
+    <div class="custom-form-wrap" id="watch-custom-form-wrap">
+      <div class="form-row">
+        <input type="datetime-local" id="watch-custom-datetime" class="form-input">
+        <input type="text" id="watch-custom-note" class="form-input" placeholder="可填写看后随记（如：二刷运镜真棒）">
+        <button class="btn-submit-custom" id="btn-watch-submit-custom">添加记录</button>
+      </div>
+    </div>
+
+    <!-- 时间轴区域 -->
+    <div class="hm-body">
+      <div class="timeline" id="watch-modal-timeline"></div>
+    </div>
+
+    <!-- 弹窗底部 -->
+    <div class="hm-footer">
+      <span>💡 支持多次打卡。视频完整播完会自动打卡记录。</span>
+      <button class="btn-clear-all" id="btn-watch-clear-all">清空所有记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 悬停微轻预览浮窗 -->
+<div id="watch-popover">
+  <div class="pop-title" id="watch-pop-title">✓ 已看过 1 次</div>
+  <div class="pop-time" id="watch-pop-time">最近一次: -</div>
+  <div class="pop-hint">💡 点击查看完整时间轴或打卡</div>
+</div>
+
 <!-- 侧边栏折叠态浮层提示 -->
 <div id="sidebar-tooltip"></div>
 
@@ -2806,9 +3274,30 @@
 
   const btnRefresh = $('btn-refresh');
   const modalFavBtn = $('modal-fav');
+  const modalWatchBtn = $('modal-watch');
   const modalRenameBtn = $('modal-rename');
   const modalDeleteBtn = $('modal-delete');
   const feedFavBtn = $('feed-fav');
+  const feedWatchBtn = $('feed-watch');
+  const watchModal = $('watch-history-modal');
+  const watchModalName = $('watch-modal-name');
+  const watchModalMeta = $('watch-modal-meta');
+  const btnWatchModalClose = $('btn-watch-modal-close');
+  const watchStatCount = $('watch-stat-count');
+  const watchStatFirst = $('watch-stat-first');
+  const watchStatLatest = $('watch-stat-latest');
+  const btnWatchCheckin = $('btn-watch-checkin');
+  const btnWatchToggleCustom = $('btn-watch-toggle-custom');
+  const watchCustomFormWrap = $('watch-custom-form-wrap');
+  const watchCustomDatetime = $('watch-custom-datetime');
+  const watchCustomNote = $('watch-custom-note');
+  const btnWatchSubmitCustom = $('btn-watch-submit-custom');
+  const watchModalTimeline = $('watch-modal-timeline');
+  const btnWatchClearAll = $('btn-watch-clear-all');
+  const watchPopover = $('watch-popover');
+  const watchPopTitle = $('watch-pop-title');
+  const watchPopTime = $('watch-pop-time');
+  let activeWatchVideo = null;
   const feedRenameBtn = $('feed-rename');
   const modalFullscreenBtn = $('modal-fullscreen');
   const modalHud = $('modal-hud');
@@ -3069,7 +3558,7 @@
   // ---------- IndexedDB 升级适配层 (含持久化缩略图池与星标收藏) ----------
   function idbOpen() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('suishi-video-db', 4);
+      const req = indexedDB.open('suishi-video-db', 5);
       req.onupgradeneeded = (e) => {
         const db = req.result;
         if (!db.objectStoreNames.contains('kv')) {
@@ -3080,6 +3569,9 @@
         }
         if (!db.objectStoreNames.contains('favorites')) {
           db.createObjectStore('favorites');
+        }
+        if (!db.objectStoreNames.contains('watch_history')) {
+          db.createObjectStore('watch_history');
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -3261,6 +3753,415 @@
         break;
       }
     }
+  }
+
+  // ---------- 观看打卡与多刷历史系统 ----------
+  let watchHistoryMap = new Map();
+
+  function getWatchKey(folderId, v) {
+    if (!v) return '';
+    const relPath = (v.path ? v.path + '/' : '') + v.name;
+    return `${folderId || ''}:${relPath}`;
+  }
+
+  function getWatchData(v) {
+    if (!v || !activeFolderId) return null;
+    return watchHistoryMap.get(getWatchKey(activeFolderId, v)) || null;
+  }
+
+  function isWatched(v) {
+    const data = getWatchData(v);
+    return !!(data && data.count > 0);
+  }
+
+  function getWatchCount(v) {
+    const data = getWatchData(v);
+    return data ? data.count : 0;
+  }
+
+  async function loadWatchHistoryForActiveFolder() {
+    watchHistoryMap.clear();
+    if (!activeFolderId) return;
+    try {
+      const db = await idbOpen();
+      return new Promise((resolve) => {
+        const tx = db.transaction('watch_history', 'readonly');
+        const store = tx.objectStore('watch_history');
+        const req = store.openCursor ? store.openCursor() : null;
+        if (!req) { resolve(); return; }
+        const prefix = `${activeFolderId}:`;
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            const keyStr = String(cursor.key || '');
+            if (keyStr.startsWith(prefix)) {
+              watchHistoryMap.set(keyStr, cursor.value);
+            }
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        req.onerror = () => resolve();
+      });
+    } catch (e) {
+      console.error('加载观看记录失败:', e);
+    }
+  }
+
+  async function recordWatch(v, customTimestamp, note = '') {
+    if (!v || !activeFolderId) return;
+    const key = getWatchKey(activeFolderId, v);
+    let entry = watchHistoryMap.get(key);
+    const time = customTimestamp || Date.now();
+    const d = new Date(time);
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    if (!entry) {
+      entry = {
+        key,
+        folderId: activeFolderId,
+        name: v.name,
+        path: v.path,
+        count: 0,
+        latestTime: time,
+        records: []
+      };
+    }
+
+    const newRecord = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      time,
+      dateStr,
+      note: (note || '').trim()
+    };
+
+    entry.records.push(newRecord);
+    entry.records.sort((a, b) => a.time - b.time);
+    entry.count = entry.records.length;
+    entry.latestTime = entry.records[entry.records.length - 1].time;
+
+    try {
+      const db = await idbOpen();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('watch_history', 'readwrite');
+        tx.objectStore('watch_history').put(entry, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      watchHistoryMap.set(key, entry);
+
+      updateWatchUI(v);
+      renderFolderBar();
+      if (activeFolder === '__WATCHED__' || activeFolder === '__UNWATCHED__') {
+        render();
+      }
+      if (watchModal && watchModal.classList.contains('show') && activeWatchVideo === v) {
+        renderWatchHistoryModal();
+      }
+    } catch (err) {
+      console.error('保存观看记录失败:', err);
+    }
+  }
+
+  async function removeWatchEntry(v, recordId) {
+    if (!v || !activeFolderId) return;
+    const key = getWatchKey(activeFolderId, v);
+    let entry = watchHistoryMap.get(key);
+    if (!entry) return;
+
+    entry.records = entry.records.filter(r => r.id !== recordId);
+    entry.count = entry.records.length;
+
+    try {
+      const db = await idbOpen();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('watch_history', 'readwrite');
+        const store = tx.objectStore('watch_history');
+        if (entry.count === 0) {
+          store.delete(key);
+        } else {
+          entry.latestTime = entry.records[entry.records.length - 1].time;
+          store.put(entry, key);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+
+      if (entry.count === 0) {
+        watchHistoryMap.delete(key);
+      } else {
+        watchHistoryMap.set(key, entry);
+      }
+
+      updateWatchUI(v);
+      renderFolderBar();
+      if (activeFolder === '__WATCHED__' || activeFolder === '__UNWATCHED__') {
+        render();
+      }
+      if (watchModal && watchModal.classList.contains('show') && activeWatchVideo === v) {
+        renderWatchHistoryModal();
+      }
+    } catch (err) {
+      console.error('删除观看记录失败:', err);
+    }
+  }
+
+  async function clearWatchHistory(v) {
+    if (!v || !activeFolderId) return;
+    const key = getWatchKey(activeFolderId, v);
+    try {
+      const db = await idbOpen();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('watch_history', 'readwrite');
+        tx.objectStore('watch_history').delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      watchHistoryMap.delete(key);
+
+      updateWatchUI(v);
+      renderFolderBar();
+      if (activeFolder === '__WATCHED__' || activeFolder === '__UNWATCHED__') {
+        render();
+      }
+      if (watchModal && watchModal.classList.contains('show') && activeWatchVideo === v) {
+        renderWatchHistoryModal();
+      }
+    } catch (err) {
+      console.error('清空观看记录失败:', err);
+    }
+  }
+
+  function updateWatchUI(v) {
+    if (!v) return;
+    const watched = isWatched(v);
+    const count = getWatchCount(v);
+
+    // 1. 更新当前弹窗中打卡按钮
+    if (modal.classList.contains('show') && currentModalIndex >= 0 && filtered[currentModalIndex] === v) {
+      if (modalWatchBtn) {
+        modalWatchBtn.textContent = watched ? (count >= 2 ? `✓ ${count}刷` : '✓ 已看') : '✓ 打卡';
+        modalWatchBtn.classList.toggle('is-active', watched);
+        modalWatchBtn.title = watched ? `已看过 ${count} 次 · 查看记录/打卡 (W)` : '标记为看过 (W)';
+      }
+      showModalHud(watched ? (count >= 2 ? `✓ 已记录第 ${count} 次观看` : '✓ 已记为看过') : '已恢复为未看');
+    }
+
+    // 2. 更新当前 Feed 中打卡按钮
+    if (feedEl.classList.contains('show')) {
+      const curSlide = feedEl.children[feedIndex];
+      if (curSlide && curSlide._srcVideo === v) {
+        if (feedWatchBtn) {
+          feedWatchBtn.textContent = watched ? (count >= 2 ? `✓${count}` : '✓') : '✓';
+          feedWatchBtn.classList.toggle('is-active', watched);
+          feedWatchBtn.title = watched ? `已看过 ${count} 次 · 查看记录/打卡 (W)` : '标记为看过 (W)';
+        }
+        showFeedHud(watched ? (count >= 2 ? `✓ 已记录第 ${count} 次观看` : '✓ 已记为看过') : '已恢复为未看');
+      }
+    }
+
+    // 3. 更新网格中的卡片角标与标记按钮
+    const cards = gridEl.querySelectorAll('.card');
+    for (const c of cards) {
+      if (c._video === v) {
+        c.classList.toggle('is-watched', watched);
+
+        // 更新左下角常驻胶囊标 (方案 A)
+        let badge = c.querySelector('.watched-pill-badge');
+        if (watched) {
+          if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'watched-pill-badge';
+            c._thumbWrap.appendChild(badge);
+            badge.addEventListener('mouseenter', (e) => showWatchPopover(e, v));
+            badge.addEventListener('mouseleave', hideWatchPopover);
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              hideWatchPopover();
+              openWatchHistoryModal(v);
+            });
+          }
+          let label = '已看';
+          badge.className = 'watched-pill-badge';
+          if (count >= 3) {
+            badge.classList.add('multi-high');
+            label = `${count}刷`;
+          } else if (count === 2) {
+            badge.classList.add('multi');
+            label = '2刷';
+          }
+          badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg><span>${label}</span>`;
+          badge.title = `累计观看 ${count} 次 · 点击展开时间轴`;
+        } else if (badge) {
+          badge.remove();
+        }
+
+        // 更新右上角悬浮打卡按钮
+        const markBtn = c.querySelector('.card-mark-btn');
+        if (markBtn) {
+          markBtn.classList.toggle('is-watched', watched);
+          markBtn.title = watched ? `已看过 ${count} 次 · 点击查看历史 (W)` : '标记为看过 (W)';
+        }
+
+        // 更新卡片 actions 里的眼睛按钮
+        const watchActionBtn = c.querySelector('.card-watch-btn');
+        if (watchActionBtn) {
+          watchActionBtn.classList.toggle('is-watched', watched);
+          watchActionBtn.title = watched ? `已看 ${count} 次 · 查看记录/打卡 (W)` : '查看记录与打卡 (W)';
+        }
+        break;
+      }
+    }
+  }
+
+  function showWatchPopover(e, v) {
+    if (!v || !watchPopover) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const data = getWatchData(v);
+    const count = data ? data.count : 0;
+    if (count === 0) return;
+    const latest = data.records[data.records.length - 1];
+
+    if (watchPopTitle) watchPopTitle.textContent = `✓ 累计看过 ${count} 次 (${count >= 2 ? '多刷' : '首刷'})`;
+    if (watchPopTime) watchPopTime.textContent = latest ? `最近一次: ${latest.dateStr}` : '';
+    watchPopover.style.left = Math.min(window.innerWidth - 250, rect.left) + 'px';
+    watchPopover.style.top = (rect.bottom + 6) + 'px';
+    watchPopover.classList.add('show');
+  }
+
+  function hideWatchPopover() {
+    if (watchPopover) watchPopover.classList.remove('show');
+  }
+
+  function openWatchHistoryModal(v) {
+    if (!v) return;
+    activeWatchVideo = v;
+    if (watchModalName) watchModalName.textContent = v.name;
+    if (watchModalMeta) watchModalMeta.textContent = `${(v.ext || '').toUpperCase()} · ${fmtSize(v.size)}${v.duration ? ' · 时长 ' + v.duration : ''} · 路径: ${v.path || '.'}`;
+    if (watchCustomDatetime) watchCustomDatetime.value = new Date().toISOString().slice(0, 16);
+    if (watchCustomNote) watchCustomNote.value = '';
+    if (watchCustomFormWrap) watchCustomFormWrap.classList.remove('open');
+    renderWatchHistoryModal();
+    if (watchModal) watchModal.classList.add('show');
+  }
+
+  function closeWatchHistoryModal() {
+    if (watchModal) watchModal.classList.remove('show');
+    activeWatchVideo = null;
+  }
+
+  function renderWatchHistoryModal() {
+    if (!activeWatchVideo) return;
+    const data = getWatchData(activeWatchVideo);
+    const history = data ? data.records : [];
+    const count = history.length;
+
+    if (watchStatCount) {
+      watchStatCount.textContent = `${count} 次`;
+      watchStatCount.className = `hm-stat-val ${count > 0 ? 'highlight' : ''}`;
+    }
+    if (watchStatFirst) watchStatFirst.textContent = count > 0 ? history[0].dateStr.split(' ')[0] : '-';
+    if (watchStatLatest) watchStatLatest.textContent = count > 0 ? history[history.length - 1].dateStr.split(' ')[0] : '-';
+
+    if (!watchModalTimeline) return;
+    watchModalTimeline.innerHTML = '';
+    if (count === 0) {
+      watchModalTimeline.innerHTML = `
+        <div class="timeline-empty">
+          <div class="timeline-empty-icon">🎬</div>
+          <div style="font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">暂无观看记录</div>
+          <div style="font-size: 12px;">点击上方「记为看过一次」立即记录现在的打卡时间</div>
+        </div>
+      `;
+      return;
+    }
+
+    const sorted = [...history].reverse();
+    sorted.forEach((item, revIdx) => {
+      const isLatest = revIdx === 0;
+      const orderNum = count - revIdx;
+      const entry = document.createElement('div');
+      entry.className = `timeline-entry ${isLatest ? 'latest' : ''}`;
+
+      entry.innerHTML = `
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <div class="tl-header">
+            <div class="tl-tag">
+              <span>第 ${orderNum} 次观看</span>
+              <span class="tl-badge ${isLatest ? 'latest' : ''}">${isLatest ? '最新一次' : (orderNum === 1 ? '首次记录' : '重温')}</span>
+            </div>
+            <button class="tl-del-btn" title="删除此条记录">✕ 撤销</button>
+          </div>
+          <div class="tl-time">📅 ${item.dateStr}</div>
+          ${item.note ? `<div class="tl-note">📝 随记: ${escapeHtml(item.note)}</div>` : ''}
+        </div>
+      `;
+      entry.querySelector('.tl-del-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeWatchEntry(activeWatchVideo, item.id);
+        transientStatus('已撤销该条观看记录');
+      });
+      watchModalTimeline.appendChild(entry);
+    });
+  }
+
+  if (btnWatchModalClose) btnWatchModalClose.addEventListener('click', closeWatchHistoryModal);
+  if (watchModal) {
+    watchModal.addEventListener('click', (e) => {
+      if (e.target === watchModal) closeWatchHistoryModal();
+    });
+  }
+  if (btnWatchCheckin) {
+    btnWatchCheckin.addEventListener('click', () => {
+      if (activeWatchVideo) {
+        recordWatch(activeWatchVideo);
+        transientStatus(`✓ 已打卡记录《${activeWatchVideo.name}》第 ${getWatchCount(activeWatchVideo)} 次观看`);
+      }
+    });
+  }
+  if (btnWatchToggleCustom) {
+    btnWatchToggleCustom.addEventListener('click', () => {
+      if (watchCustomFormWrap) watchCustomFormWrap.classList.toggle('open');
+    });
+  }
+  if (btnWatchSubmitCustom) {
+    btnWatchSubmitCustom.addEventListener('click', () => {
+      if (!activeWatchVideo) return;
+      const dt = watchCustomDatetime ? watchCustomDatetime.value : '';
+      if (!dt) { alert('请选择打卡日期与时间'); return; }
+      const time = new Date(dt).getTime();
+      const note = watchCustomNote ? watchCustomNote.value : '';
+      recordWatch(activeWatchVideo, time, note);
+      if (watchCustomFormWrap) watchCustomFormWrap.classList.remove('open');
+      if (watchCustomNote) watchCustomNote.value = '';
+      transientStatus(`✓ 已补录历史观看记录`);
+    });
+  }
+  if (btnWatchClearAll) {
+    btnWatchClearAll.addEventListener('click', () => {
+      if (!activeWatchVideo) return;
+      if (confirm(`确认清空《${activeWatchVideo.name}》的所有观看记录吗？`)) {
+        clearWatchHistory(activeWatchVideo);
+        transientStatus('已清空观看记录，恢复为「未看」');
+      }
+    });
+  }
+  if (modalWatchBtn) {
+    modalWatchBtn.addEventListener('click', () => {
+      const v = filtered[currentModalIndex];
+      if (v) openWatchHistoryModal(v);
+    });
+  }
+  if (feedWatchBtn) {
+    feedWatchBtn.addEventListener('click', () => {
+      const curSlide = feedEl.children[feedIndex];
+      if (curSlide && curSlide._srcVideo) {
+        openWatchHistoryModal(curSlide._srcVideo);
+      }
+    });
   }
 
   // ---------- 视频断点续播记忆系统 ----------
@@ -4177,7 +5078,7 @@
     setStatus(`正在扫描「${cur.customName || cur.name}」中的视频与图片…`);
     setControlsEnabled(false);
 
-    await loadFavoritesForActiveFolder();
+    await Promise.all([loadFavoritesForActiveFolder(), loadWatchHistoryForActiveFolder()]);
 
     const recursive = recursiveChk.checked;
     let count = 0;
@@ -4247,7 +5148,7 @@
     emptyState.style.display = 'none';
     setStatus(`正在从「${remoteInfo.host || '电脑'}」读取「${label}」的清单…`);
     setControlsEnabled(false);
-    if (!rescan) await loadFavoritesForActiveFolder();
+    if (!rescan) await Promise.all([loadFavoritesForActiveFolder(), loadWatchHistoryForActiveFolder()]);
 
     const recursive = recursiveChk.checked;
     let list = null;
@@ -4288,7 +5189,7 @@
       }
       removedCount = oldMap.size;
       allVideos = merged;
-      await loadFavoritesForActiveFolder();
+      await Promise.all([loadFavoritesForActiveFolder(), loadWatchHistoryForActiveFolder()]);
     } else {
       allVideos = list;
     }
@@ -4475,7 +5376,7 @@
     applyFolderCounts(cur);
     await saveFolderState();
     renderSidebar();
-    await loadFavoritesForActiveFolder();
+    await Promise.all([loadFavoritesForActiveFolder(), loadWatchHistoryForActiveFolder()]);
 
     setControlsEnabled(true);
     btnRefresh.classList.remove('is-spinning');
@@ -4516,6 +5417,12 @@
       if (key === 'name') r = a.name.localeCompare(b.name, 'zh');
       else if (key === 'date') r = a.mtime - b.mtime;
       else if (key === 'taken') r = (a._taken || a.mtime) - (b._taken || b.mtime);   // 无 EXIF 时回退修改时间
+      else if (key === 'watch-count') r = getWatchCount(a) - getWatchCount(b);
+      else if (key === 'watch-date') {
+        const tA = getWatchData(a)?.latestTime || 0;
+        const tB = getWatchData(b)?.latestTime || 0;
+        r = tA - tB;
+      }
       else r = a.size - b.size;
       return r * sortDir;
     });
@@ -4599,6 +5506,17 @@
         const db = await idbOpen();
         const tx = db.transaction('favorites', 'readwrite');
         tx.objectStore('favorites').delete(favKey);
+      } catch {}
+    }
+
+    // 级联清理观看记录
+    const watchKey = getWatchKey(activeFolderId, v);
+    if (watchHistoryMap.has(watchKey)) {
+      watchHistoryMap.delete(watchKey);
+      try {
+        const db = await idbOpen();
+        const tx = db.transaction('watch_history', 'readwrite');
+        tx.objectStore('watch_history').delete(watchKey);
       } catch {}
     }
 
@@ -4830,9 +5748,11 @@
       }
     }
 
-    // 4. 更新收藏记录
+    // 4. 更新收藏与观看记录
     const oldFavKey = getFavoriteKey(activeFolderId, v);
     const wasFav = favoriteSet.has(oldFavKey);
+    const oldWatchKey = getWatchKey(activeFolderId, v);
+    const oldWatchEntry = watchHistoryMap.get(oldWatchKey);
     v.name = newFullName;
 
     if (wasFav) {
@@ -4850,6 +5770,21 @@
           relPath: (v.path ? v.path + '/' : '') + v.name,
           addedAt: Date.now()
         });
+      } catch {}
+    }
+
+    if (oldWatchEntry) {
+      watchHistoryMap.delete(oldWatchKey);
+      const newWatchKey = getWatchKey(activeFolderId, v);
+      oldWatchEntry.key = newWatchKey;
+      oldWatchEntry.name = newFullName;
+      watchHistoryMap.set(newWatchKey, oldWatchEntry);
+      try {
+        const db = await idbOpen();
+        const tx = db.transaction('watch_history', 'readwrite');
+        const store = tx.objectStore('watch_history');
+        store.delete(oldWatchKey);
+        store.put(oldWatchEntry, newWatchKey);
       } catch {}
     }
 
@@ -4929,7 +5864,9 @@
     folderBarEl.innerHTML = '';
     const base = mediaBase();
     const favCount = base.filter(isFavorited).length;
-    const shouldShow = hasFolderGroups || favCount > 0;
+    const watchedCount = base.filter(isWatched).length;
+    const unwatchedCount = base.length - watchedCount;
+    const shouldShow = hasFolderGroups || favCount > 0 || watchedCount > 0;
     folderBarEl.classList.toggle('show', shouldShow);
     if (!shouldShow) return;
 
@@ -4948,7 +5885,7 @@
       const pill = document.createElement('button');
       pill.type = 'button';
       pill.className = 'folder-pill' + (activeFolder === key ? ' active' : '') + (extraClass ? ' ' + extraClass : '');
-      if (key && key !== '__FAVORITES__') {
+      if (key && !key.startsWith('__')) {
         const dot = document.createElement('span');
         dot.className = 'dot';
         dot.style.background = colorForFolder(key);
@@ -4969,6 +5906,12 @@
     folderBarEl.appendChild(makePill('全部', base.length, null));
     if (favCount > 0 || activeFolder === '__FAVORITES__') {
       folderBarEl.appendChild(makePill('⭐ 已收藏', favCount, '__FAVORITES__', 'fav-pill'));
+    }
+    if (watchedCount > 0 || activeFolder === '__WATCHED__') {
+      folderBarEl.appendChild(makePill('✓ 已看', watchedCount, '__WATCHED__', 'watched-pill'));
+    }
+    if ((watchedCount > 0 && unwatchedCount > 0) || activeFolder === '__UNWATCHED__') {
+      folderBarEl.appendChild(makePill('未看', unwatchedCount, '__UNWATCHED__', 'unwatched-pill'));
     }
     if (hasFolderGroups) {
       keys.forEach((k) => folderBarEl.appendChild(makePill(k, counts.get(k) || 0, k)));
@@ -5047,6 +5990,10 @@
     let base = mediaBase().filter(v => !q || v.name.toLowerCase().includes(q) || v.path.toLowerCase().includes(q));
     if (activeFolder === '__FAVORITES__') {
       base = base.filter(isFavorited);
+    } else if (activeFolder === '__WATCHED__') {
+      base = base.filter(isWatched);
+    } else if (activeFolder === '__UNWATCHED__') {
+      base = base.filter(v => !isWatched(v));
     } else if (activeFolder) {
       base = base.filter(v => topFolderOf(v) === activeFolder);
     }
@@ -5054,6 +6001,10 @@
     let groups;
     if (activeFolder === '__FAVORITES__') {
       groups = [{ name: '⭐ 已收藏', items: sortGroup(base) }];
+    } else if (activeFolder === '__WATCHED__') {
+      groups = [{ name: '✓ 已看过的媒体', items: sortGroup(base) }];
+    } else if (activeFolder === '__UNWATCHED__') {
+      groups = [{ name: '👁️ 尚未看过的媒体', items: sortGroup(base) }];
     } else if (!hasFolderGroups || activeFolder) {
       groups = [{ name: activeFolder, items: sortGroup(base) }];
     } else {
@@ -5124,8 +6075,10 @@
     const img = isImage(v);
     const isPlayable = isNativeMedia(v);
     const isFav = isFavorited(v);
+    const watched = isWatched(v);
+    const watchCount = getWatchCount(v);
     const card = document.createElement('div');
-    card.className = 'card' + (!isPlayable ? ' is-non-playable' : '') + (img ? ' is-image' : '');
+    card.className = 'card' + (!isPlayable ? ' is-non-playable' : '') + (img ? ' is-image' : '') + (watched ? ' is-watched' : '');
     card.dataset.idx = idx;
 
     const thumbWrap = document.createElement('div');
@@ -5179,6 +6132,43 @@
     });
     thumbWrap.appendChild(favBtn);
 
+    // 观看记录打卡按钮 (与星标并排)
+    const markBtn = document.createElement('button');
+    markBtn.type = 'button';
+    markBtn.className = 'card-mark-btn' + (watched ? ' is-watched' : '');
+    markBtn.title = watched ? `已看过 ${watchCount} 次 · 查看记录/打卡 (W)` : '标记为看过 (W)';
+    markBtn.textContent = '✓';
+    markBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openWatchHistoryModal(v);
+    });
+    thumbWrap.appendChild(markBtn);
+
+    // 缩略图左下角常驻胶囊徽标 (方案 A 推荐)
+    if (watched) {
+      const watchedBadge = document.createElement('div');
+      let multiClass = '';
+      let label = '已看';
+      if (watchCount >= 3) {
+        multiClass = 'multi-high';
+        label = `${watchCount}刷`;
+      } else if (watchCount === 2) {
+        multiClass = 'multi';
+        label = '2刷';
+      }
+      watchedBadge.className = `watched-pill-badge ${multiClass}`.trim();
+      watchedBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg><span>${label}</span>`;
+      watchedBadge.title = `累计观看 ${watchCount} 次 · 点击展开时间轴`;
+      watchedBadge.addEventListener('mouseenter', (e) => showWatchPopover(e, v));
+      watchedBadge.addEventListener('mouseleave', hideWatchPopover);
+      watchedBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideWatchPopover();
+        openWatchHistoryModal(v);
+      });
+      thumbWrap.appendChild(watchedBadge);
+    }
+
     if (isPlayable && img) {
       const openBtn = document.createElement('button');
       openBtn.type = 'button';
@@ -5226,6 +6216,17 @@
 
     const actionsEl = document.createElement('div');
     actionsEl.className = 'card-actions';
+
+    const watchActionBtn = document.createElement('button');
+    watchActionBtn.type = 'button';
+    watchActionBtn.className = 'card-watch-btn' + (watched ? ' is-watched' : '');
+    watchActionBtn.title = watched ? `已看 ${watchCount} 次 · 查看记录/打卡 (W)` : '查看记录与打卡 (W)';
+    watchActionBtn.textContent = '👁️';
+    watchActionBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openWatchHistoryModal(v);
+    });
+    actionsEl.appendChild(watchActionBtn);
 
     const renameBtn = document.createElement('button');
     renameBtn.type = 'button';
@@ -5917,6 +6918,13 @@
       feedFavBtn.textContent = isFav ? '★' : '☆';
       feedFavBtn.classList.toggle('is-active', isFav);
     }
+    if (curSlide && curSlide._srcVideo && feedWatchBtn) {
+      const watched = isWatched(curSlide._srcVideo);
+      const watchCount = getWatchCount(curSlide._srcVideo);
+      feedWatchBtn.textContent = watched ? (watchCount >= 2 ? `✓${watchCount}` : '✓') : '✓';
+      feedWatchBtn.classList.toggle('is-active', watched);
+      feedWatchBtn.title = watched ? `已看过 ${watchCount} 次 · 查看记录/打卡 (W)` : '标记为看过 (W)';
+    }
     updateFeedSource(curSlide ? curSlide._srcVideo : null);
     feedMuteBtn.disabled = !!(curSlide && curSlide._image);
     for (let i = 0; i < slides.length; i++) {
@@ -6070,6 +7078,13 @@
     if (modalFavBtn) {
       modalFavBtn.textContent = isFav ? '★ 已收藏' : '⭐ 收藏';
       modalFavBtn.classList.toggle('is-active', isFav);
+    }
+    const watched = isWatched(v);
+    const watchCount = getWatchCount(v);
+    if (modalWatchBtn) {
+      modalWatchBtn.textContent = watched ? (watchCount >= 2 ? `✓ ${watchCount}刷` : '✓ 已看') : '✓ 打卡';
+      modalWatchBtn.classList.toggle('is-active', watched);
+      modalWatchBtn.title = watched ? `已看过 ${watchCount} 次 · 查看记录/打卡 (W)` : '标记为看过 (W)';
     }
     modal.classList.add('show');
     navPrev.style.visibility = filtered.slice(0, idx).some(isNativeMedia) ? 'visible' : 'hidden';
@@ -6282,6 +7297,10 @@
     }, SLIDESHOW_DWELL);
   }
   modalVideo.addEventListener('ended', () => {
+    const curV = filtered[currentModalIndex];
+    if (curV && !isImage(curV) && modalVideo.duration >= 3) {
+      recordWatch(curV, Date.now(), '播放完毕自动打卡');
+    }
     if (!slideshowOn) return;
     if (modalHasNext()) navigate(1);
     else { stopSlideshow(true); showModalHud('放映结束'); }
@@ -6496,6 +7515,15 @@
       return;
     }
 
+    // 观看历史弹窗打开时
+    if (watchModal && watchModal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeWatchHistoryModal();
+      }
+      return;
+    }
+
     // 分组弹窗打开时
     if (groupModal && groupModal.classList.contains('show')) {
       if (e.key === 'Escape') {
@@ -6534,6 +7562,11 @@
         e.preventDefault();
         if (curSlide && curSlide._srcVideo) {
           toggleFavorite(curSlide._srcVideo);
+        }
+      } else if (e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        if (curSlide && curSlide._srcVideo) {
+          openWatchHistoryModal(curSlide._srcVideo);
         }
       } else if (e.key === 'F2') {
         e.preventDefault();
@@ -6593,6 +7626,11 @@
         e.preventDefault();
         if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
           toggleFavorite(filtered[currentModalIndex]);
+        }
+      } else if (e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        if (currentModalIndex >= 0 && filtered[currentModalIndex]) {
+          openWatchHistoryModal(filtered[currentModalIndex]);
         }
       } else if (e.key === 'F2') {
         e.preventDefault();
@@ -6670,6 +7708,11 @@
       e.preventDefault();
       if (lastHoveredVideo) {
         openRenameDialog(lastHoveredVideo);
+      }
+    } else if (e.key.toLowerCase() === 'w') {
+      if (lastHoveredVideo) {
+        e.preventDefault();
+        openWatchHistoryModal(lastHoveredVideo);
       }
     } else if ((e.key === 'r' || e.key === 'R') && activeFolderId) {
       e.preventDefault();

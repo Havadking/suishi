@@ -15,8 +15,8 @@ test('HTML 包含 P2 阶段关键功能所需的 DOM 元素与 IDB 版本', () =
   assert.match(htmlContent, /id=["']modal-delete["']/, '应该存在 #modal-delete 删除按钮');
   // Feed 收藏按钮
   assert.match(htmlContent, /id=["']feed-fav["']/, '应该存在 #feed-fav 收藏按钮');
-  // 数据库升级至版本 4
-  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*4\)/, 'IndexedDB 版本应升级为 4');
+  // 数据库升级至版本 4 或更高
+  assert.match(htmlContent, /indexedDB\.open\(['"]suishi-video-db['"],\s*[4-9]\)/, 'IndexedDB 版本应升级为 4 或更高');
   // 包含 favorites 对象仓库
   assert.match(htmlContent, /favorites/, '应该包含 favorites 收藏表');
   // 卡片星标类名或样式

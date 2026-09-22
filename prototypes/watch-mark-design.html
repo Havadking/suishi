@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随拾 (SuiShi) · 视频「已看标记与多刷记录」交互设计稿 (零冲突版)</title>
+<style>
+  :root {
+    /* 随拾经典日常亲切风 (Warm Cozy Handcraft Palette) */
+    --bg-base: #FBF9F5;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F6F2EB;
+    --bg-hover: #EFE9DE;
+    --border: #E8E0D5;
+    --border-light: #F0EBE1;
+    --text-main: #2D2724;
+    --text-muted: #797167;
+    --text-light: #A39B90;
+    --accent: #E07A5F;
+    --accent-hover: #D0694E;
+    --accent-subtle: #FDF2EE;
+    --accent-border: #F7D4C8;
+    --secondary-accent: #6B8E7C; /* 鼠尾草绿 */
+    --secondary-accent-subtle: #EDF3F0;
+    --secondary-accent-border: #CCDCD3;
+    --watched-color: #5A8F76; /* 已看状态专用翡翠绿 */
+    --watched-bg: rgba(43, 76, 61, 0.88);
+    --watched-subtle: #EBF3EE;
+    --danger: #E55353;
+    --danger-subtle: #FDEDEC;
+    --shadow-sm: 0 1px 3px rgba(65, 45, 30, 0.05), 0 1px 2px rgba(65, 45, 30, 0.04);
+    --shadow-md: 0 4px 16px rgba(65, 45, 30, 0.08), 0 2px 6px rgba(65, 45, 30, 0.04);
+    --shadow-lg: 0 10px 30px rgba(65, 45, 30, 0.12), 0 4px 10px rgba(65, 45, 30, 0.06);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+    --sidebar-w: 240px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  button, input, select, textarea {
+    font-family: inherit;
+  }
+
+  #app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  /* ---------- 侧边栏 ---------- */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    user-select: none;
+    z-index: 20;
+  }
+
+  .sb-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    height: 60px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #E07A5F, #F28E2B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(224, 122, 95, 0.3);
+  }
+  .brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+
+  .sb-menu {
+    padding: 12px 8px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .sb-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    padding: 8px 10px 4px;
+    letter-spacing: 0.5px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sb-item:hover {
+    background: var(--bg-subtle);
+    color: var(--text-main);
+  }
+  .sb-item.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sb-item .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sb-item .badge-count {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    color: var(--text-light);
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-item.active .badge-count {
+    background: rgba(224, 122, 95, 0.15);
+    color: var(--accent);
+  }
+
+  /* 试玩模式控制器面板 */
+  .demo-control-panel {
+    background: #FAF7F2;
+    border: 1px solid var(--border);
+    margin: 10px;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-size: 12px;
+  }
+  .demo-panel-title {
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .demo-control-group {
+    margin-bottom: 10px;
+  }
+  .demo-control-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .demo-select {
+    width: 100%;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-main);
+    font-size: 12px;
+  }
+  .demo-check-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-main);
+    cursor: pointer;
+    margin-top: 6px;
+  }
+
+  /* ---------- 主内容区 ---------- */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ========================================================
+     【1:1 真实还原随拾主工程顶部导航栏】零侵入、零冲突
+     ======================================================== */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    height: 60px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    z-index: 10;
+    user-select: none;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 7px 12px 7px 32px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.15s;
+  }
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+  .search-wrap input::placeholder { color: var(--text-light); }
+
+  /* 媒体类型分段器（完全原样：全部 / 视频 / 图片） */
+  .media-seg {
+    display: inline-flex;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+  }
+  .media-seg button {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+  }
+  .media-seg button .n { font-size: 11px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+  .media-seg button:hover { color: var(--text-main); }
+  .media-seg button.on {
+    background: var(--bg-surface);
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+  }
+  .media-seg button.on[data-mode="video"] { color: var(--accent); }
+  .media-seg button.on[data-mode="image"] { color: var(--secondary-accent); }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    font-size: 14px;
+  }
+  .icon-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  select, .btn-normal {
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--bg-surface);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  select:hover, .btn-normal:hover { border-color: var(--accent); }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .checkbox-label input { accent-color: var(--accent); }
+
+  .btn-accent {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: #fff;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-accent:hover {
+    background: var(--accent-hover);
+  }
+
+  .spacer { flex: 1; }
+
+  .stats {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-subtle);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========================================================
+     【二级胶囊栏 #folder-bar】：已看 / 未看最完美的安放位置！
+     零占用顶栏空间，与「⭐ 已收藏」完全齐平统一！
+     ======================================================== */
+  #folder-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-light);
+    overflow-x: auto;
+    user-select: none;
+  }
+  #folder-bar::-webkit-scrollbar { height: 4px; }
+  #folder-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .folder-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.12s;
+  }
+  .folder-pill:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+    background: var(--bg-subtle);
+  }
+  .folder-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 500;
+    box-shadow: 0 2px 6px rgba(224, 122, 95, 0.25);
+  }
+  /* 收藏高光金 */
+  .folder-pill.fav-pill.active {
+    background: #E8A838;
+    border-color: #E8A838;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(232, 168, 56, 0.35);
+  }
+  /* 【已看胶囊标】自然融入二级栏，高光翡翠绿 */
+  .folder-pill.watched-pill.active {
+    background: var(--watched-color);
+    border-color: var(--watched-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(90, 143, 118, 0.35);
+  }
+  /* 【未看胶囊标】方便查漏补缺 */
+  .folder-pill.unwatched-pill.active {
+    background: #6B7280;
+    border-color: #6B7280;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(107, 114, 128, 0.35);
+  }
+  .folder-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .folder-pill .count {
+    font-size: 11px;
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 提示条横幅 */
+  .design-banner {
+    background: #FFFDF9;
+    border-bottom: 1px solid var(--border-light);
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .design-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .design-tag {
+    background: var(--secondary-accent-subtle);
+    color: var(--watched-color);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 11px;
+    border: 1px solid var(--secondary-accent-border);
+  }
+
+  /* ---------- 滚动内容区域 ---------- */
+  #content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .grid-title {
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grid-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .grid-sub {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* 视频网格 (完全复用现有 index.html 响应式列排) */
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  /* 视频卡片 (与原项目 .card 完全一致) */
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* 缩略图容器 (原 .thumb-wrap) */
+  .thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #1C1917;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .thumb-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.25s ease, filter 0.2s ease, opacity 0.2s ease;
+  }
+  .card:hover .thumb-wrap img {
+    transform: scale(1.03);
+  }
+
+  /* 格式角标 (左上角原样) */
+  .ext-badge {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    background: rgba(28, 23, 20, 0.65);
+    backdrop-filter: blur(4px);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    z-index: 2;
+  }
+
+  /* 时长角标 (右下角原样) */
+  .duration-badge {
+    position: absolute;
+    bottom: 7px;
+    right: 7px;
+    background: rgba(28, 23, 20, 0.78);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    z-index: 2;
+  }
+
+  /* 悬浮操作按钮组 (右上角原样) */
+  .card-top-btn {
+    position: absolute;
+    top: 7px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(28, 23, 20, 0.75);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    border: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    z-index: 3;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .card:hover .card-top-btn {
+    display: flex;
+  }
+  .card-play-btn {
+    right: 7px;
+  }
+  .card-play-btn:hover {
+    background: var(--accent);
+    transform: scale(1.1);
+  }
+  .card-fav-btn {
+    right: 42px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .card-fav-btn.is-active {
+    display: flex;
+    color: #F2C94C;
+    background: rgba(28, 23, 20, 0.85);
+  }
+  .card-fav-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: scale(1.1);
+  }
+
+  /* 方案 A（推荐）：缩略图左下角胶囊徽标 */
+  .watched-pill-badge {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+    background: var(--watched-bg);
+    backdrop-filter: blur(4px);
+    color: #E2F4EB;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: background 0.15s, transform 0.15s, color 0.15s;
+  }
+  .watched-pill-badge:hover {
+    background: #2E5A47;
+    color: #FFFFFF;
+    transform: scale(1.05);
+  }
+  .watched-pill-badge.multi {
+    background: rgba(43, 76, 61, 0.95);
+    border: 1px solid rgba(134, 239, 172, 0.4);
+    color: #A7F3D0;
+  }
+  .watched-pill-badge.multi-high {
+    background: rgba(120, 53, 15, 0.9);
+    border: 1px solid rgba(253, 230, 138, 0.4);
+    color: #FDE68A;
+  }
+
+  /* 缩略图打卡按钮 (位置：right: 77px，与星标收藏并列) */
+  .card-mark-btn {
+    right: 77px;
+    font-size: 13px;
+  }
+  .card-mark-btn.is-watched {
+    display: flex;
+    color: #A7F3D0;
+    background: rgba(28, 48, 38, 0.85);
+  }
+  .card-mark-btn:hover {
+    background: var(--watched-color);
+    color: #fff;
+    transform: scale(1.1);
+  }
+
+  /* 方案 B 切换样式 */
+  .style-b .watched-pill-badge { display: none !important; }
+  .style-b .card-mark-btn { display: flex !important; }
+
+  /* 方案 C 切换样式 */
+  .style-c .watched-pill-badge { display: none !important; }
+  .style-c .card-mark-btn { display: none !important; }
+  .card-meta-watched-tag {
+    display: none;
+    font-size: 10.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .style-c .card-meta-watched-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  /* 可选视觉微调 */
+  .card.is-watched.dim-thumbnail .thumb-wrap img {
+    filter: brightness(0.92) contrast(0.95);
+  }
+  .card.is-watched.show-watched-border {
+    border-color: rgba(90, 143, 118, 0.35);
+  }
+
+  /* 卡片底部信息 (原样) */
+  .card-body {
+    padding: 9px 12px 11px;
+    background: var(--bg-surface);
+  }
+  .card-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-main);
+  }
+  .card-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-path {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-light);
+    max-width: 100px;
+  }
+
+  .card-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .card-action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.45;
+    transition: opacity 0.15s, background 0.15s;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .card-action-btn:hover {
+    opacity: 1;
+    background: var(--bg-hover);
+  }
+  .card-action-btn.active-watched {
+    opacity: 0.9;
+    color: var(--watched-color);
+  }
+
+  /* 悬停微预览浮窗 */
+  #quick-popover {
+    position: fixed;
+    background: rgba(28, 23, 20, 0.94);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    font-size: 11.5px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s, transform 0.15s;
+    max-width: 220px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  #quick-popover.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #quick-popover .pop-title {
+    font-weight: 600;
+    color: #A7F3D0;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #quick-popover .pop-time {
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.4;
+  }
+  #quick-popover .pop-hint {
+    margin-top: 5px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.45);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 3px;
+  }
+
+  /* 观看历史弹窗 (Watch History Modal) */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 20, 18, 0.65);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .modal-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .history-modal-dialog {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 520px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.96) translateY(8px);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid var(--border);
+  }
+  .modal-backdrop.show .history-modal-dialog {
+    transform: scale(1) translateY(0);
+  }
+
+  .hm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    background: #FAF8F5;
+  }
+  .hm-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hm-icon-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--secondary-accent-subtle);
+    color: var(--watched-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 1px solid var(--secondary-accent-border);
+  }
+  .hm-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .hm-header p {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--text-light);
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hm-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: var(--text-light);
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .hm-close-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+  }
+
+  .hm-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 14px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .hm-stat-col {
+    text-align: center;
+  }
+  .hm-stat-label {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-bottom: 2px;
+  }
+  .hm-stat-val {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+  }
+  .hm-stat-val.highlight {
+    color: var(--watched-color);
+  }
+  .hm-stat-sep {
+    width: 1px;
+    height: 28px;
+    background: var(--border-light);
+  }
+
+  .hm-action-bar {
+    padding: 12px 20px;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-checkin {
+    flex: 1;
+    background: var(--watched-color);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(90, 143, 118, 0.28);
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-checkin:hover {
+    background: #4A7A64;
+    transform: translateY(-1px);
+  }
+  .btn-custom-checkin {
+    background: var(--bg-surface);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-custom-checkin:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+  }
+
+  .custom-form-wrap {
+    display: none;
+    padding: 12px 20px;
+    background: #FAF7F2;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .custom-form-wrap.open {
+    display: block;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .form-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--text-main);
+  }
+  .btn-submit-custom {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-submit-custom:hover {
+    background: var(--accent-hover);
+  }
+
+  .hm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    position: relative;
+  }
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--border);
+  }
+  .timeline-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+  }
+  .timeline-empty-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  .timeline-entry {
+    position: relative;
+    margin-bottom: 18px;
+    transition: opacity 0.2s;
+  }
+  .timeline-entry:last-child {
+    margin-bottom: 0;
+  }
+  .tl-dot {
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 3px solid var(--watched-color);
+    box-shadow: 0 0 0 2px var(--bg-surface);
+  }
+  .timeline-entry.latest .tl-dot {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+  }
+  .tl-content {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+  }
+  .timeline-entry:hover .tl-content {
+    background: var(--bg-base);
+    border-color: var(--border);
+  }
+  .tl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+  .tl-tag {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tl-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--secondary-accent-subtle);
+    color: var(--watched-color);
+    font-weight: 600;
+  }
+  .tl-badge.latest {
+    background: var(--accent-subtle);
+    color: var(--accent);
+  }
+  .tl-del-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .timeline-entry:hover .tl-del-btn {
+    opacity: 0.7;
+  }
+  .tl-del-btn:hover {
+    opacity: 1 !important;
+    background: var(--danger-subtle);
+    color: var(--danger);
+  }
+  .tl-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-note {
+    margin-top: 6px;
+    padding: 4px 6px;
+    border-top: 1px dashed var(--border-light);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.015);
+    border-radius: 3px;
+  }
+
+  .hm-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-light);
+    background: #FAF8F5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-light);
+  }
+  .btn-clear-all {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    font-size: 11.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .btn-clear-all:hover {
+    background: var(--danger-subtle);
+  }
+
+  /* 吐司通知 */
+  #toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(28, 23, 20, 0.92);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 侧边栏 -->
+  <aside id="sidebar">
+    <div class="sb-head">
+      <div class="brand-logo">随</div>
+      <div>
+        <div class="brand-title">随拾 SuiShi</div>
+        <div class="brand-sub">零冲突设计验证</div>
+      </div>
+    </div>
+
+    <!-- 方案对比控制器（供评审即时切换卡片效果） -->
+    <div class="demo-control-panel">
+      <div class="demo-panel-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        卡片标记位置对比
+      </div>
+
+      <div class="demo-control-group">
+        <label class="demo-control-label">卡片角标形态：</label>
+        <select id="style-selector" class="demo-select">
+          <option value="style-a">方案 A（推荐）：缩略图左下角胶囊标</option>
+          <option value="style-b">方案 B：右上角打卡按钮（对齐星标）</option>
+          <option value="style-c">方案 C：底部元信息栏标签</option>
+        </select>
+      </div>
+
+      <div class="demo-control-group">
+        <label class="demo-control-label">直观视觉辨别选项：</label>
+        <label class="demo-check-item">
+          <input type="checkbox" id="chk-dim" onchange="toggleDimOption(this.checked)">
+          <span>已看视频轻微调暗缩略图</span>
+        </label>
+        <label class="demo-check-item">
+          <input type="checkbox" id="chk-border" onchange="toggleBorderOption(this.checked)" checked>
+          <span>已看视频微绿内边框点缀</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sb-menu">
+      <div class="sb-section-title">媒体库分类</div>
+      <div class="sb-item active" onclick="switchFolder('all')">
+        <div class="left">
+          <span>📁</span>
+          <span>全部媒体</span>
+        </div>
+        <span class="badge-count" id="sb-all-count">8</span>
+      </div>
+      <div class="sb-item" onclick="switchFolder('favorites')">
+        <div class="left">
+          <span>⭐</span>
+          <span>我的收藏</span>
+        </div>
+        <span class="badge-count">3</span>
+      </div>
+      <div class="sb-item" onclick="switchFolder('vlog')">
+        <div class="left">
+          <span>📹</span>
+          <span>日常 Vlog</span>
+        </div>
+        <span class="badge-count">5</span>
+      </div>
+      <div class="sb-item" onclick="switchFolder('movies')">
+        <div class="left">
+          <span>🎬</span>
+          <span>经典电影与片段</span>
+        </div>
+        <span class="badge-count">3</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 主内容区 -->
+  <main id="main">
+    <!-- ========================================================
+         【现行顶部导航栏 1:1 纯正还原】：搜索框 + 媒体分段器 + 刷新 + 排序 + 刷视频
+         绝对不添加新的宽幅控件，与截图完全保持 100% 相同排版！
+         ======================================================== -->
+    <header>
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="在当前抽屉中搜索文件名或路径…" oninput="handleSearch(this.value)">
+      </div>
+
+      <!-- 媒体类型分段器（与原项目完全一致，绝不冲突！） -->
+      <div class="media-seg" id="media-seg" title="只看视频 / 只看图片">
+        <button type="button" class="on" onclick="setMediaType('all', this)">全部 <span class="n" id="n-all">8</span></button>
+        <button type="button" onclick="setMediaType('video', this)">🎬 视频 <span class="n" id="n-video">8</span></button>
+        <button type="button" onclick="setMediaType('image', this)">🖼 图片 <span class="n" id="n-image">0</span></button>
+      </div>
+
+      <!-- 刷新按钮 -->
+      <button id="btn-refresh" class="icon-btn" title="刷新当前目录 (R)" onclick="renderGrid(); showToast('已刷新目录')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+      </button>
+
+      <!-- 排序下拉菜单：自然拓展「按观看次数」与「按最近观看」，零侵占空间！ -->
+      <select id="sort-key" onchange="handleSortChange(this.value)">
+        <option value="name">按文件名</option>
+        <option value="date">按修改时间</option>
+        <option value="size">按文件大小</option>
+        <option value="watch-count">按观看次数 (多刷优先)</option>
+        <option value="watch-date">按最近观看时间</option>
+      </select>
+      <button id="sort-dir" class="btn-normal" title="切换升序/降序" onclick="toggleSortDir()">↑</button>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="recursive" checked>
+        包含子目录
+      </label>
+
+      <button id="btn-feed" class="btn-accent" title="沉浸式竖屏刷视频" onclick="showToast('模拟进入刷视频模式')">
+        🔀 刷视频
+      </button>
+
+      <div class="spacer"></div>
+      <div class="stats" id="stats">8 / 8 · 8 个视频 · 1.4 GB</div>
+    </header>
+
+    <!-- ========================================================
+         【二级快速切换胶囊栏 #folder-bar】：
+         这里才是随拾放置「全部」、「⭐ 已收藏」以及分类标签的正统位置！
+         我们在「⭐ 已收藏」旁边优雅加入「✓ 已看 (5)」与「未看 (3)」，零破坏、零冲突！
+         ======================================================== -->
+    <div id="folder-bar">
+      <!-- 全部 -->
+      <button type="button" class="folder-pill active" id="pill-all" onclick="setFolderFilter('all')">
+        <span>全部</span>
+        <span class="count" id="bar-cnt-all">8</span>
+      </button>
+
+      <!-- 收藏 -->
+      <button type="button" class="folder-pill fav-pill" id="pill-fav" onclick="setFolderFilter('favorites')">
+        <span>⭐ 已收藏</span>
+        <span class="count" id="bar-cnt-fav">3</span>
+      </button>
+
+      <!-- 【已看胶囊】就像已收藏一样并列！ -->
+      <button type="button" class="folder-pill watched-pill" id="pill-watched" onclick="setFolderFilter('watched')" title="只看已经打卡看过的视频">
+        <span>✓ 已看</span>
+        <span class="count" id="bar-cnt-watched">5</span>
+      </button>
+
+      <!-- 【未看胶囊】方便随时查找没看过的视频 -->
+      <button type="button" class="folder-pill unwatched-pill" id="pill-unwatched" onclick="setFolderFilter('unwatched')" title="只看尚未打卡看过的视频">
+        <span>未看</span>
+        <span class="count" id="bar-cnt-unwatched">3</span>
+      </button>
+
+      <!-- 顶级子目录原样保留 -->
+      <button type="button" class="folder-pill" id="pill-vlog" onclick="setFolderFilter('vlog')">
+        <span class="dot" style="background: #E07A5F;"></span>
+        <span>日常 Vlog</span>
+        <span class="count">5</span>
+      </button>
+      <button type="button" class="folder-pill" id="pill-movies" onclick="setFolderFilter('movies')">
+        <span class="dot" style="background: #6B8E7C;"></span>
+        <span>经典电影与片段</span>
+        <span class="count">3</span>
+      </button>
+    </div>
+
+    <!-- 顶部零冲突说明横幅 -->
+    <div class="design-banner">
+      <div class="design-banner-left">
+        <span class="design-tag">零冲突验证</span>
+        <span>✅ <b>顶部主导航栏 100% 保持现有布局</b>（搜索框、媒体分段器、刷新、排序、刷视频等原样保留）。「已看/未看」无缝沉淀在 <b>二级胶囊栏</b> 与「⭐ 已收藏」并列，体验顺畅统一！</span>
+      </div>
+      <div>
+        <span style="font-size: 11px; color: var(--text-light);">已看进度: <b id="banner-progress" style="color: var(--watched-color);">5 / 8 (62.5%)</b></span>
+      </div>
+    </div>
+
+    <!-- 视频网格滚动区 -->
+    <div id="content-scroll">
+      <div class="grid-header">
+        <div class="grid-title">
+          <span class="dot"></span>
+          <span id="current-folder-title">全部媒体</span>
+        </div>
+        <div class="grid-sub" id="grid-sub-stats">共 8 个视频 · 5 个已看</div>
+      </div>
+
+      <div class="video-grid" id="video-grid">
+        <!-- 动态渲染卡片 -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 悬停气泡预览浮窗 (Mini Popover) -->
+<div id="quick-popover">
+  <div class="pop-title" id="pop-title">✓ 已看过 2 次</div>
+  <div class="pop-time" id="pop-time">最近一次: 2026-09-20 21:30</div>
+  <div class="pop-hint">💡 点击查看完整时间轴或打卡</div>
+</div>
+
+<!-- 观看历史记录详情弹窗 (Watch History Modal) -->
+<div class="modal-backdrop" id="history-modal" onclick="closeModalOnBackdrop(event)">
+  <div class="history-modal-dialog" onclick="event.stopPropagation()">
+    <div class="hm-header">
+      <div class="hm-title-wrap">
+        <div class="hm-icon-badge">✓</div>
+        <div>
+          <h3 id="modal-video-name">视频名称</h3>
+          <p id="modal-video-meta">MP4 · 245 MB · 08:34</p>
+        </div>
+      </div>
+      <button class="hm-close-btn" onclick="closeModal()" title="关闭 (Esc)">✕</button>
+    </div>
+
+    <!-- 核心统计概览卡片 -->
+    <div class="hm-summary-bar">
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">累计观看</div>
+        <div class="hm-stat-val highlight" id="stat-count">0 次</div>
+      </div>
+      <div class="hm-stat-sep"></div>
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">首次观看</div>
+        <div class="hm-stat-val" id="stat-first">-</div>
+      </div>
+      <div class="hm-stat-sep"></div>
+      <div class="hm-stat-col">
+        <div class="hm-stat-label">最近观看</div>
+        <div class="hm-stat-val" id="stat-latest">-</div>
+      </div>
+    </div>
+
+    <!-- 快捷操作栏 -->
+    <div class="hm-action-bar">
+      <button class="btn-checkin" onclick="quickCheckIn()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>记为看过一次 (以当前时间打卡)</span>
+      </button>
+      <button class="btn-custom-checkin" onclick="toggleCustomForm()">
+        <span>📅 补记历史时间</span>
+      </button>
+    </div>
+
+    <!-- 自定义补打卡折叠表单 -->
+    <div class="custom-form-wrap" id="custom-form-wrap">
+      <div class="form-row">
+        <input type="datetime-local" id="custom-datetime" class="form-input">
+        <input type="text" id="custom-note" class="form-input" placeholder="可填写看后随记（如：二刷运镜真棒）">
+        <button class="btn-submit-custom" onclick="submitCustomCheckIn()">添加记录</button>
+      </div>
+    </div>
+
+    <!-- 时间轴区域 -->
+    <div class="hm-body">
+      <div class="timeline" id="modal-timeline">
+        <!-- 动态生成时间轴 -->
+      </div>
+    </div>
+
+    <!-- 弹窗底部 -->
+    <div class="hm-footer">
+      <span>💡 支持多次打卡。可在播放器播完时联动自动标记。</span>
+      <button class="btn-clear-all" onclick="clearCurrentHistory()">清空所有记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 吐司通知 -->
+<div id="toast">已打卡</div>
+
+<script>
+  // 模拟数据模型：具有不同的观看次数与时间戳记录
+  const mockVideos = [
+    {
+      id: "v1",
+      name: "2026年春季日本京都樱花漫步 4K.mp4",
+      ext: "mp4",
+      size: 1420000000,
+      duration: "14:28",
+      path: "旅行记录/2026",
+      isFav: true,
+      folder: "vlog",
+      thumbGradient: "linear-gradient(135deg, #2b5876, #4e4376)",
+      history: [
+        { id: 101, time: 1774160000000, dateStr: "2026-03-20 15:30", note: "首次在电脑上看完了剪辑预览" },
+        { id: 102, time: 1774332800000, dateStr: "2026-03-22 10:15", note: "和朋友在投影仪上重温" }
+      ]
+    },
+    {
+      id: "v2",
+      name: "星际穿越 Interstellar - 空间站旋转对接名场面.mkv",
+      ext: "mkv",
+      size: 850000000,
+      duration: "06:12",
+      path: "电影精选/科幻",
+      isFav: true,
+      folder: "movies",
+      thumbGradient: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+      history: [
+        { id: 201, time: 1762100000000, dateStr: "2025-11-03 21:00", note: "经典初看" },
+        { id: 202, time: 1768100000000, dateStr: "2026-01-11 23:10", note: "测试新买的漫步者音响效果" },
+        { id: 203, time: 1774000000000, dateStr: "2026-03-18 19:45", note: "三刷，配乐实在太无敌了" }
+      ]
+    },
+    {
+      id: "v3",
+      name: "猫咪周末慵懒打滚翻肚皮实录.mov",
+      ext: "mov",
+      size: 320000000,
+      duration: "02:18",
+      path: "萌宠日常",
+      isFav: false,
+      folder: "vlog",
+      thumbGradient: "linear-gradient(135deg, #F3904F, #3B4371)",
+      history: [
+        { id: 301, time: 1773000000000, dateStr: "2026-03-08 14:02", note: "随手拍随手看" }
+      ]
+    },
+    {
+      id: "v4",
+      name: "Blender 4.0 几何节点水流特效渲染教学.mp4",
+      ext: "mp4",
+      size: 1980000000,
+      duration: "45:10",
+      path: "学习教程/CG特效",
+      isFav: false,
+      folder: "vlog",
+      thumbGradient: "linear-gradient(135deg, #11998e, #38ef7d)",
+      history: [] // 未看过
+    },
+    {
+      id: "v5",
+      name: "赛博朋克风格未来夜市航拍巡游.mp4",
+      ext: "mp4",
+      size: 1120000000,
+      duration: "08:52",
+      path: "素材灵感",
+      isFav: false,
+      folder: "movies",
+      thumbGradient: "linear-gradient(135deg, #8A2387, #E94057, #F27121)",
+      history: [] // 未看过
+    },
+    {
+      id: "v6",
+      name: "雨夜咖啡馆白噪音与爵士钢琴 (ASMR 助眠).mp4",
+      ext: "mp4",
+      size: 2400000000,
+      duration: "120:00",
+      path: "音乐助眠",
+      isFav: true,
+      folder: "vlog",
+      thumbGradient: "linear-gradient(135deg, #1D2671, #C33764)",
+      history: [
+        { id: 601, time: 1765000000000, dateStr: "2025-12-06 23:30", note: "睡前听" },
+        { id: 602, time: 1766000000000, dateStr: "2025-12-18 22:45", note: "码字背景音" },
+        { id: 603, time: 1770000000000, dateStr: "2026-02-02 23:00", note: "" },
+        { id: 604, time: 1773500000000, dateStr: "2026-03-14 23:15", note: "四刷，百听不厌" }
+      ]
+    },
+    {
+      id: "v7",
+      name: "大理洱海双廊日出延时摄影 8K.mp4",
+      ext: "mp4",
+      size: 780000000,
+      duration: "03:40",
+      path: "旅行记录/云南",
+      isFav: false,
+      folder: "vlog",
+      thumbGradient: "linear-gradient(135deg, #ff9966, #ff5e62)",
+      history: [
+        { id: 701, time: 1771000000000, dateStr: "2026-02-14 09:20", note: "情人节早晨看的" }
+      ]
+    },
+    {
+      id: "v8",
+      name: "周星驰《大话西游》城墙绝响催泪混剪.mkv",
+      ext: "mkv",
+      size: 450000000,
+      duration: "05:14",
+      path: "电影精选/华语经典",
+      isFav: false,
+      folder: "movies",
+      thumbGradient: "linear-gradient(135deg, #4A00E0, #8E2DE2)",
+      history: [] // 未看过
+    }
+  ];
+
+  let currentFolderFilter = 'all';
+  let currentSearch = '';
+  let activeModalVideo = null;
+  let currentStyle = 'style-a';
+  let sortKey = 'name';
+  let sortAsc = true;
+
+  function fmtSize(bytes) {
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(0) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+  }
+
+  function formatNow() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // 方案切换
+  document.getElementById('style-selector').addEventListener('change', (e) => {
+    currentStyle = e.target.value;
+    document.body.className = currentStyle;
+    renderGrid();
+    showToast(`已切换至：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  function toggleDimOption(checked) {
+    document.querySelectorAll('.card.is-watched').forEach(c => {
+      c.classList.toggle('dim-thumbnail', checked);
+    });
+  }
+
+  function toggleBorderOption(checked) {
+    document.querySelectorAll('.card.is-watched').forEach(c => {
+      c.classList.toggle('show-watched-border', checked);
+    });
+  }
+
+  // 媒体类型切换
+  function setMediaType(mode, btn) {
+    document.querySelectorAll('.media-seg button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    showToast(`切换媒体类型：${btn.textContent.trim()}`);
+  }
+
+  // 排序下拉更改
+  function handleSortChange(val) {
+    sortKey = val;
+    renderGrid();
+    showToast(`当前排序：${document.getElementById('sort-key').selectedOptions[0].text}`);
+  }
+
+  // 排序升降序切换
+  function toggleSortDir() {
+    sortAsc = !sortAsc;
+    document.getElementById('sort-dir').textContent = sortAsc ? '↑' : '↓';
+    renderGrid();
+  }
+
+  // 二级胶囊栏切换（包含 全部 / 收藏 / 已看 / 未看 / 目录）
+  function setFolderFilter(key) {
+    currentFolderFilter = key;
+    document.querySelectorAll('.folder-pill').forEach(p => p.classList.remove('active'));
+    const btn = document.getElementById(`pill-${key}`);
+    if (btn) btn.classList.add('active');
+
+    const titles = {
+      all: '全部媒体',
+      favorites: '⭐ 我的收藏',
+      watched: '✓ 已看过的视频',
+      unwatched: '👁️ 尚未看过的视频',
+      vlog: '📹 日常 Vlog',
+      movies: '🎬 经典电影与片段'
+    };
+    document.getElementById('current-folder-title').textContent = titles[key] || '媒体列表';
+    renderGrid();
+  }
+
+  // 侧边栏联动
+  function switchFolder(folder) {
+    document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    setFolderFilter(folder);
+  }
+
+  function handleSearch(val) {
+    currentSearch = val.trim().toLowerCase();
+    renderGrid();
+  }
+
+  // 渲染视频网格
+  function renderGrid() {
+    const grid = document.getElementById('video-grid');
+    grid.innerHTML = '';
+
+    let list = [...mockVideos];
+
+    // 更新数量统计
+    const totalCount = mockVideos.length;
+    const watchedCount = mockVideos.filter(v => v.history.length > 0).length;
+    const unwatchedCount = totalCount - watchedCount;
+    const favCount = mockVideos.filter(v => v.isFav).length;
+
+    document.getElementById('bar-cnt-all').textContent = totalCount;
+    document.getElementById('bar-cnt-fav').textContent = favCount;
+    document.getElementById('bar-cnt-watched').textContent = watchedCount;
+    document.getElementById('bar-cnt-unwatched').textContent = unwatchedCount;
+
+    // 进度说明
+    const pct = Math.round((watchedCount / totalCount) * 100);
+    document.getElementById('banner-progress').textContent = `${watchedCount} / ${totalCount} (${pct}%)`;
+
+    // 过滤逻辑
+    if (currentFolderFilter === 'favorites') {
+      list = list.filter(v => v.isFav);
+    } else if (currentFolderFilter === 'watched') {
+      list = list.filter(v => v.history.length > 0);
+    } else if (currentFolderFilter === 'unwatched') {
+      list = list.filter(v => v.history.length === 0);
+    } else if (currentFolderFilter === 'vlog' || currentFolderFilter === 'movies') {
+      list = list.filter(v => v.folder === currentFolderFilter);
+    }
+
+    if (currentSearch) {
+      list = list.filter(v => v.name.toLowerCase().includes(currentSearch) || v.path.toLowerCase().includes(currentSearch));
+    }
+
+    // 排序逻辑
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') {
+        cmp = a.name.localeCompare(b.name, 'zh');
+      } else if (sortKey === 'size') {
+        cmp = a.size - b.size;
+      } else if (sortKey === 'watch-count') {
+        cmp = a.history.length - b.history.length;
+      } else if (sortKey === 'watch-date') {
+        const tA = a.history.length ? a.history[a.history.length - 1].time : 0;
+        const tB = b.history.length ? b.history[b.history.length - 1].time : 0;
+        cmp = tA - tB;
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+
+    document.getElementById('grid-sub-stats').textContent = `共 ${list.length} 个项目 · ${list.filter(v=>v.history.length>0).length} 个已看`;
+    document.getElementById('stats').textContent = `${list.length} / ${totalCount} · ${list.length} 个视频 · 1.4 GB`;
+
+    if (list.length === 0) {
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-light);">
+        <div style="font-size: 32px; margin-bottom: 8px;">📭</div>
+        <div>没有找到匹配条件的视频</div>
+      </div>`;
+      return;
+    }
+
+    list.forEach(v => {
+      const isWatched = v.history.length > 0;
+      const count = v.history.length;
+      const card = document.createElement('div');
+      card.className = `card ${isWatched ? 'is-watched' : ''}`;
+      if (isWatched && document.getElementById('chk-dim').checked) {
+        card.classList.add('dim-thumbnail');
+      }
+      if (isWatched && document.getElementById('chk-border').checked) {
+        card.classList.add('show-watched-border');
+      }
+
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'thumb-wrap';
+      thumbWrap.style.background = v.thumbGradient;
+
+      thumbWrap.innerHTML = `
+        <div style="opacity: 0.25; transform: scale(1.4);">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.2">
+            <path d="M4 4h16v16H4z"/><path d="M10 9l5 3-5 3z"/>
+          </svg>
+        </div>
+        <div class="ext-badge">${v.ext}</div>
+        <div class="duration-badge">${v.duration}</div>
+      `;
+
+      // 播放按钮
+      const playBtn = document.createElement('button');
+      playBtn.className = 'card-top-btn card-play-btn';
+      playBtn.innerHTML = '▶';
+      playBtn.title = '播放视频';
+      playBtn.onclick = (e) => {
+        e.stopPropagation();
+        showToast(`模拟播放：${v.name}`);
+      };
+      thumbWrap.appendChild(playBtn);
+
+      // 收藏星标
+      const favBtn = document.createElement('button');
+      favBtn.className = `card-top-btn card-fav-btn ${v.isFav ? 'is-active' : ''}`;
+      favBtn.innerHTML = v.isFav ? '★' : '☆';
+      favBtn.title = v.isFav ? '取消收藏' : '添加收藏';
+      favBtn.onclick = (e) => {
+        e.stopPropagation();
+        v.isFav = !v.isFav;
+        renderGrid();
+        showToast(v.isFav ? '⭐ 已加入收藏' : '☆ 已取消收藏');
+      };
+      thumbWrap.appendChild(favBtn);
+
+      // 缩略图打卡按钮 (位置：right: 77px，与星标收藏并列)
+      const markBtn = document.createElement('button');
+      markBtn.className = `card-top-btn card-mark-btn ${isWatched ? 'is-watched' : ''}`;
+      markBtn.innerHTML = '✓';
+      markBtn.title = isWatched ? `已看过 ${count} 次 · 点击查看历史` : '记为看过 (打卡)';
+      markBtn.onclick = (e) => {
+        e.stopPropagation();
+        openWatchHistoryModal(v);
+      };
+      thumbWrap.appendChild(markBtn);
+
+      // 方案 A 重点：左下角常驻胶囊徽标 (仅已看视频展示，不挤占未看视频空间)
+      if (isWatched) {
+        const badge = document.createElement('div');
+        let multiClass = '';
+        let label = '已看';
+        if (count >= 3) {
+          multiClass = 'multi-high';
+          label = `${count}刷`;
+        } else if (count === 2) {
+          multiClass = 'multi';
+          label = '2刷';
+        }
+
+        badge.className = `watched-pill-badge ${multiClass}`;
+        badge.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>
+          <span>${label}</span>
+        `;
+        badge.title = `累计观看 ${count} 次 · 点击展开时间轴`;
+
+        badge.onmouseenter = (e) => showPopover(e, v);
+        badge.onmouseleave = hidePopover;
+        badge.onclick = (e) => {
+          e.stopPropagation();
+          hidePopover();
+          openWatchHistoryModal(v);
+        };
+        thumbWrap.appendChild(badge);
+      }
+
+      card.appendChild(thumbWrap);
+
+      // 卡片信息区
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.innerHTML = `
+        <div class="card-name" title="${v.name}">${v.name}</div>
+        <div class="card-meta">
+          <span class="card-path" title="${v.path}">${v.path}</span>
+          <span>${fmtSize(v.size)}</span>
+          <div class="card-actions">
+            <!-- 方案 C：在元信息栏放置的小标签 -->
+            <span class="card-meta-watched-tag ${isWatched ? 'active' : ''}" style="${isWatched ? 'background: var(--secondary-accent-subtle); color: var(--watched-color); font-weight:600;' : 'background: var(--bg-subtle); color: var(--text-light);'}">
+              ${isWatched ? `✓ ${count}次` : '未看'}
+            </span>
+            <button class="card-action-btn ${isWatched ? 'active-watched' : ''}" title="观看打卡与记录" onclick="event.stopPropagation(); openWatchHistoryModal(mockVideos.find(x=>x.id==='${v.id}'))">
+              👁️
+            </button>
+            <button class="card-action-btn" title="重命名 (F2)">✏️</button>
+            <button class="card-action-btn" title="删除">🗑️</button>
+          </div>
+        </div>
+      `;
+
+      card.onclick = () => {
+        openWatchHistoryModal(v);
+      };
+
+      grid.appendChild(card);
+    });
+  }
+
+  // 气泡迷你预览交互
+  const popover = document.getElementById('quick-popover');
+  function showPopover(e, video) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const latest = video.history[video.history.length - 1];
+    document.getElementById('pop-title').textContent = `✓ 累计看过 ${video.history.length} 次 (${video.history.length >= 2 ? '多刷' : '首刷'})`;
+    document.getElementById('pop-time').textContent = latest ? `最近一次: ${latest.dateStr}` : '';
+    popover.style.left = Math.min(window.innerWidth - 240, rect.left) + 'px';
+    popover.style.top = (rect.bottom + 6) + 'px';
+    popover.classList.add('show');
+  }
+  function hidePopover() {
+    popover.classList.remove('show');
+  }
+
+  // 观看历史弹窗 (Watch History Modal)
+  function openWatchHistoryModal(video) {
+    activeModalVideo = video;
+    document.getElementById('modal-video-name').textContent = video.name;
+    document.getElementById('modal-video-meta').textContent = `${video.ext.toUpperCase()} · ${fmtSize(video.size)} · 时长 ${video.duration} · 路径: ${video.path}`;
+    document.getElementById('custom-datetime').value = new Date().toISOString().slice(0, 16);
+    document.getElementById('custom-note').value = '';
+    document.getElementById('custom-form-wrap').classList.remove('open');
+    renderModalHistory();
+    document.getElementById('history-modal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('history-modal').classList.remove('show');
+    activeModalVideo = null;
+  }
+
+  function closeModalOnBackdrop(e) {
+    if (e.target === document.getElementById('history-modal')) {
+      closeModal();
+    }
+  }
+
+  function renderModalHistory() {
+    if (!activeModalVideo) return;
+    const history = activeModalVideo.history || [];
+    const count = history.length;
+
+    document.getElementById('stat-count').textContent = `${count} 次`;
+    document.getElementById('stat-count').className = `hm-stat-val ${count > 0 ? 'highlight' : ''}`;
+    document.getElementById('stat-first').textContent = count > 0 ? history[0].dateStr.split(' ')[0] : '-';
+    document.getElementById('stat-latest').textContent = count > 0 ? history[history.length - 1].dateStr.split(' ')[0] : '-';
+
+    const timeline = document.getElementById('modal-timeline');
+    timeline.innerHTML = '';
+
+    if (count === 0) {
+      timeline.innerHTML = `
+        <div class="timeline-empty">
+          <div class="timeline-empty-icon">🎬</div>
+          <div style="font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">暂无观看记录</div>
+          <div style="font-size: 12px;">点击上方「记为看过一次」立即记录现在的打卡时间</div>
+        </div>
+      `;
+      return;
+    }
+
+    const sorted = [...history].reverse();
+    sorted.forEach((item, revIdx) => {
+      const isLatest = revIdx === 0;
+      const orderNum = count - revIdx;
+      const entry = document.createElement('div');
+      entry.className = `timeline-entry ${isLatest ? 'latest' : ''}`;
+
+      entry.innerHTML = `
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <div class="tl-header">
+            <div class="tl-tag">
+              <span>第 ${orderNum} 次观看</span>
+              <span class="tl-badge ${isLatest ? 'latest' : ''}">${isLatest ? '最新一次' : (orderNum === 1 ? '首次记录' : '重温')}</span>
+            </div>
+            <button class="tl-del-btn" title="删除此条记录" onclick="deleteHistoryEntry(${item.id})">✕ 撤销</button>
+          </div>
+          <div class="tl-time">
+            <span>📅 ${item.dateStr}</span>
+          </div>
+          ${item.note ? `<div class="tl-note">📝 随记: ${item.note}</div>` : ''}
+        </div>
+      `;
+      timeline.appendChild(entry);
+    });
+  }
+
+  function quickCheckIn() {
+    if (!activeModalVideo) return;
+    const nowStr = formatNow();
+    const newEntry = {
+      id: Date.now(),
+      time: Date.now(),
+      dateStr: nowStr,
+      note: ""
+    };
+    activeModalVideo.history.push(newEntry);
+    renderModalHistory();
+    renderGrid();
+    showToast(`✓ 已打卡记录：第 ${activeModalVideo.history.length} 次观看 (${nowStr})`);
+  }
+
+  function toggleCustomForm() {
+    document.getElementById('custom-form-wrap').classList.toggle('open');
+  }
+
+  function submitCustomCheckIn() {
+    if (!activeModalVideo) return;
+    const dtInput = document.getElementById('custom-datetime').value;
+    const noteInput = document.getElementById('custom-note').value.trim();
+
+    if (!dtInput) {
+      alert('请选择打卡日期与时间');
+      return;
+    }
+
+    const d = new Date(dtInput);
+    const pad = n => String(n).padStart(2, '0');
+    const formatted = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    const newEntry = {
+      id: Date.now(),
+      time: d.getTime(),
+      dateStr: formatted,
+      note: noteInput
+    };
+
+    activeModalVideo.history.push(newEntry);
+    activeModalVideo.history.sort((a, b) => a.time - b.time);
+
+    document.getElementById('custom-form-wrap').classList.remove('open');
+    document.getElementById('custom-note').value = '';
+    renderModalHistory();
+    renderGrid();
+    showToast(`✓ 已补录历史观看记录 (${formatted})`);
+  }
+
+  function deleteHistoryEntry(entryId) {
+    if (!activeModalVideo) return;
+    activeModalVideo.history = activeModalVideo.history.filter(h => h.id !== entryId);
+    renderModalHistory();
+    renderGrid();
+    showToast('已删除该条观看打卡');
+  }
+
+  function clearCurrentHistory() {
+    if (!activeModalVideo) return;
+    if (confirm(`确认清空《${activeModalVideo.name}》的所有观看打卡记录吗？`)) {
+      activeModalVideo.history = [];
+      renderModalHistory();
+      renderGrid();
+      showToast('已清空观看记录，恢复为「未看」');
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2400);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+
+  renderGrid();
+</script>
+</body>
+</html>
